@@ -22,5 +22,6 @@ Route::post("/verify-email", [UserController::class, "verifyEmail"]);
 
 
 Route::middleware(['auth:sanctum'])->group(function () {
+    Route::get("/test", [UserController::class, "getUser"])->middleware("isAdmin");
     Route::get("/user", [UserController::class, "getUser"]);
 });

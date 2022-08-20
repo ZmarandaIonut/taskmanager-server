@@ -8,7 +8,7 @@ use Illuminate\Http\Request;
 use Illuminate\Support\Facades\Auth;
 use Illuminate\Http\Response;
 
-class CheckIfUserIsAdmin extends ApiController
+class CheckIfUserIsSuperAdmin extends ApiController
 {
     /**
      * Handle an incoming request.
@@ -20,7 +20,7 @@ class CheckIfUserIsAdmin extends ApiController
     public function handle(Request $request, Closure $next)
     {
         $user = Auth::user();
-        if ($user->isAdmin) {
+        if ($user->isSuperAdmin) {
             return $next($request);
         } else {
             return $this->sendError("Not allowed", [], Response::HTTP_FORBIDDEN);
