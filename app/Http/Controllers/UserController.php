@@ -72,9 +72,10 @@ class UserController extends ApiController
             $user = User::where('email', $request->get("email"))->first();
             if (!$user) {
                 $error = true;
-            }
-            if (!Hash::check($request->get("password"), $user->password)) {
-                $error = true;
+            } else {
+                if (!Hash::check($request->get("password"), $user->password)) {
+                    $error = true;
+                }
             }
             if ($error) {
                 return $this->sendError('Bad credentials!');
@@ -89,7 +90,7 @@ class UserController extends ApiController
                 "user" => $user->toArray()
             ]);
         } catch (Exception $exception) {
-            error_log($exception);
+            error_log($request->get("password"));
             return $this->sendError('Something went wrong, please contact administrator!', [], Response::HTTP_INTERNAL_SERVER_ERROR);
         }
     }
