@@ -99,7 +99,7 @@ class UserController extends ApiController
         try {
             $validate = Validator::make($request->all(), [
                 "email" => 'required|email|exists:users,email',
-                "code" => 'required|'
+                "code" => 'required'
             ]);
 
             if ($validate->fails()) {
