@@ -149,7 +149,7 @@ class UserController extends ApiController
         ]);
     }
 
-    public function getUserBoards(Request $request)
+    public function getUserBoards()
     {
         try {
             $user = Auth::user();

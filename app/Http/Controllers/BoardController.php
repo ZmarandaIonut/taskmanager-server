@@ -11,12 +11,13 @@ use Illuminate\Support\Facades\Validator;
 use Illuminate\Http\Response;
 use Illuminate\Support\Facades\Auth;
 use Illuminate\Support\Facades\DB;
+use Illuminate\Support\Facades\Log;
 use Illuminate\Support\Str;
 
 class BoardController extends ApiController
 {
 
-    public function createBoard(Request $request)
+    public function add(Request $request)
     {
         try {
             $validate = Validator::make($request->all(), [
@@ -44,12 +45,12 @@ class BoardController extends ApiController
 
             return $this->sendResponse($board->toArray(), Response::HTTP_CREATED);
         } catch (Exception $exception) {
-            //    error_log($exception);
+            Log::error($exception);
             return $this->sendError('Something went wrong, please contact administrator!', [], Response::HTTP_INTERNAL_SERVER_ERROR);
         }
     }
 
-    public function updateBoard($id, Request $request)
+    public function update($id, Request $request)
     {
         try {
             $board = Board::find($id);
@@ -88,11 +89,12 @@ class BoardController extends ApiController
             $board->save();
             return $this->sendResponse($board->toArray());
         } catch (Exception $exception) {
+            Log::error($exception);
             return $this->sendError('Something went wrong, please contact administrator!', [], Response::HTTP_INTERNAL_SERVER_ERROR);
         }
     }
 
-    public function deleteBoard($id)
+    public function delete($id)
     {
         try {
             $board = Board::find($id);
@@ -111,6 +113,7 @@ class BoardController extends ApiController
 
             return $this->sendResponse([], Response::HTTP_NO_CONTENT);
         } catch (Exception $exception) {
+            Log::error($exception);
             return $this->sendError('Something went wrong, please contact administrator!', [], Response::HTTP_INTERNAL_SERVER_ERROR);
         }
     }
