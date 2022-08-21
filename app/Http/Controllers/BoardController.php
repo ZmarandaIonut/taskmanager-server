@@ -60,15 +60,19 @@ class BoardController extends ApiController
             $user = Auth::user();
 
             $boardMembers = $board->getMembers;
+            $foundUser = false;
             if ($boardMembers) {
                 foreach ($boardMembers as $member) {
                     if ($member->id === $user->id) {
                         if ($member->role !== "Admin") {
                             return $this->sendError("Not allowed to update this board", [], Response::HTTP_METHOD_NOT_ALLOWED);
                         }
-                        break;
+                        $foundUser = true;
                     }
                 }
+            }
+            if (!$foundUser) {
+                return $this->sendError("Not allowed to update this board", [], Response::HTTP_METHOD_NOT_ALLOWED);
             }
 
             $validate = Validator::make($request->all(), [
