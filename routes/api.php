@@ -1,6 +1,7 @@
 <?php
 
 use App\Http\Controllers\BoardController;
+use App\Http\Controllers\StatusController;
 use Illuminate\Http\Request;
 use Illuminate\Support\Facades\Route;
 use App\Http\Controllers\UserController;
@@ -24,5 +25,11 @@ Route::post("/verify-email", [UserController::class, "verifyEmail"]);
 
 Route::middleware(['auth:sanctum'])->group(function () {
     Route::get("/user", [UserController::class, "getUser"]);
-    Route::post("/createboard", [BoardController::class, "createBoard"]);
+    Route::post("/create-board", [BoardController::class, "createBoard"]);
+
+
+    Route::post("/create-status", [StatusController::class, "add"]);
+    Route::post("/get-statuses", [StatusController::class, "getAll"]);
+    Route::post("/get-status/{id}", [StatusController::class, "get"]);
+    Route::post("/update-status/{id}", [StatusController::class, "update"]);
 });
