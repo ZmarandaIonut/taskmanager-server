@@ -1,5 +1,6 @@
 <?php
 
+use App\Http\Controllers\BoardController;
 use Illuminate\Http\Request;
 use Illuminate\Support\Facades\Route;
 use App\Http\Controllers\UserController;
@@ -23,4 +24,5 @@ Route::post("/verify-email", [UserController::class, "verifyEmail"]);
 
 Route::middleware(['auth:sanctum'])->group(function () {
     Route::get("/user", [UserController::class, "getUser"]);
+    Route::post("/createboard", [BoardController::class, "createBoard"]);
 });
