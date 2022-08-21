@@ -1,6 +1,7 @@
 <?php
 
 use App\Http\Controllers\BoardController;
+use App\Http\Controllers\StatusController;
 use Illuminate\Http\Request;
 use Illuminate\Support\Facades\Route;
 use App\Http\Controllers\UserController;
@@ -29,4 +30,10 @@ Route::middleware(['auth:sanctum'])->group(function () {
     Route::post("/createboard", [BoardController::class, "createBoard"]);
     Route::put("/updateBoard/{id}", [BoardController::class, "updateBoard"]);
     Route::delete("/deleteBoard/{id}", [BoardController::class, "deleteBoard"]);
+
+
+    Route::post("/create-status", [StatusController::class, "add"]);
+    Route::post("/get-statuses", [StatusController::class, "getAll"]);
+    Route::post("/get-status/{id}", [StatusController::class, "get"]);
+    Route::post("/update-status/{id}", [StatusController::class, "update"]);
 });
