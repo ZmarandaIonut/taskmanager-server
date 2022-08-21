@@ -2,6 +2,7 @@
 
 namespace App\Http\Controllers;
 
+use App\Models\Board;
 use Illuminate\Http\Request;
 use Illuminate\Support\Facades\Validator;
 use Illuminate\Support\Facades\Hash;
@@ -146,5 +147,17 @@ class UserController extends ApiController
         return $this->sendResponse([
             'data' => 'Code for email verification sent!'
         ]);
+    }
+
+    public function getUserBoards(Request $request)
+    {
+        try {
+            $user = Auth::user();
+            $userBoards = $user->getBoards;
+            return $this->sendResponse($userBoards);
+        } catch (Exception $exception) {
+            error_log($exception);
+            return $this->sendError('Something went wrong, please contact administrator!', [], Response::HTTP_INTERNAL_SERVER_ERROR);
+        }
     }
 }

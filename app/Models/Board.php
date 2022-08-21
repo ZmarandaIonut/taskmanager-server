@@ -10,4 +10,9 @@ class Board extends Model
     use HasFactory;
 
     protected $hidden = ["created_at", "updated_at"];
+
+    public function getMembers()
+    {
+        return $this->hasMany(BoardMembers::class, 'board_id', 'id');
+    }
 }

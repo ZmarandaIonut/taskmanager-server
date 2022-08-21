@@ -24,5 +24,9 @@ Route::post("/verify-email", [UserController::class, "verifyEmail"]);
 
 Route::middleware(['auth:sanctum'])->group(function () {
     Route::get("/user", [UserController::class, "getUser"]);
+    Route::get("/getUserBoards", [UserController::class, "getUserBoards"]);
+
     Route::post("/createboard", [BoardController::class, "createBoard"]);
+    Route::put("/updateBoard/{id}", [BoardController::class, "updateBoard"]);
+    Route::delete("/deleteBoard/{id}", [BoardController::class, "deleteBoard"]);
 });
