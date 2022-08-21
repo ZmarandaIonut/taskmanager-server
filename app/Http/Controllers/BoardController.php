@@ -111,6 +111,7 @@ class BoardController extends ApiController
 
             return $this->sendResponse([], Response::HTTP_NO_CONTENT);
         } catch (Exception $exception) {
+            error_log($exception);
             return $this->sendError('Something went wrong, please contact administrator!', [], Response::HTTP_INTERNAL_SERVER_ERROR);
         }
     }
