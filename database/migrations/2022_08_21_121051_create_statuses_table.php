@@ -15,9 +15,9 @@ return new class extends Migration
     {
         Schema::create('statuses', function (Blueprint $table) {
             $table->id();
-            $table->string('name', 50);
-            $table->integer('board_id');
-            $table->foreign('board_id')->references('id')->on('boards')->onDelete('cascade');    
+            $table->string("name", 50);
+            $table->bigInteger("board_id")->unsigned();
+            $table->foreign("board_id")->references("id")->on("boards")->onDelete("cascade");    
             $table->timestamps();
         });
     }
