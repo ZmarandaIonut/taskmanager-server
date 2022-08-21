@@ -31,7 +31,6 @@ Route::middleware(['auth:sanctum'])->group(function () {
     Route::put("/updateBoard/{id}", [BoardController::class, "updateBoard"]);
     Route::delete("/deleteBoard/{id}", [BoardController::class, "deleteBoard"]);
 
-
     Route::post("/create-status", [StatusController::class, "add"]);
     Route::post("/get-statuses", [StatusController::class, "getAll"]);
     Route::post("/get-status/{id}", [StatusController::class, "get"]);
