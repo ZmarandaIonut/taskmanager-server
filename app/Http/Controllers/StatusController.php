@@ -5,13 +5,15 @@ namespace App\Http\Controllers;
 use App\Models\Status;
 use Illuminate\Http\Request;
 use Illuminate\Support\Facades\Validator;
+use Illuminate\Http\JsonResponse;
 use Illuminate\Http\Response;
 use Illuminate\Support\Facades\Log;
 use Exception;
+use Illuminate\Support\Facades\DB;
 
-class StatusController extends Controller
+class StatusController extends ApiController
 {
-    public function add(Request $request)
+    public function add(Request $request): JsonResponse
     {
         try {
             $validate = Validator::make($request->all(), [
@@ -30,16 +32,27 @@ class StatusController extends Controller
 
             return $this->sendResponse($status->toArray(), Response::HTTP_CREATED);
         } catch (Exception $exception) {
+            Log::error($exception);
             return $this->sendError('Something went wrong, please contact administrator!', [], Response::HTTP_INTERNAL_SERVER_ERROR);
         }
     }
-    public function getAll(Request $request)
+
+        /**
+     * @param Request $request
+     * @return JsonResponse
+     */
+    public function getAll(Request $request): JsonResponse
     {
         try {
             $statuses = Status::query();
-
+            $perPage = $request->get('perPage', 20);
+            $statuses = $statuses->paginate($perPage);
             $results = [
-                'data' => $statuses->items()
+                'data' => $statuses->items(),
+                'currentPage' => $statuses->currentPage(),
+                'perPage' => $statuses->perPage(),
+                'total' => $statuses->total(),
+                'hasMorePages' => $statuses->hasMorePages()
             ];
 
             return $this->sendResponse($results);
@@ -49,7 +62,7 @@ class StatusController extends Controller
             return $this->sendError('Something went wrong, please contact administrator!', [], Response::HTTP_INTERNAL_SERVER_ERROR);
         }
     }
-    public function get($id)
+    public function get($id): JsonResponse
     {
         try {
             $status = Status::find($id);
@@ -66,7 +79,7 @@ class StatusController extends Controller
         }
     }
 
-    public function update($id, Request $request)
+    public function update($id, Request $request): JsonResponse
     {
         try {
             $status = Status::find($id);
@@ -89,7 +102,7 @@ class StatusController extends Controller
 
 
             $status->name = $name;
-            $status->board_id = $$board_id;
+            $status->board_id = $board_id;
             $status->save();
 
             return $this->sendResponse($status->toArray());
@@ -99,4 +112,28 @@ class StatusController extends Controller
             return $this->sendError('Something went wrong, please contact administrator!', [], Response::HTTP_INTERNAL_SERVER_ERROR);
         }
     }
+
+    public function delete($id): JsonResponse
+    {
+        try {
+            $status = Status::find($id);
+
+            if (!$status) {
+                return $this->sendError('status not found!', [], Response::HTTP_NOT_FOUND);
+            }
+
+            DB::beginTransaction();
+
+            $status->delete();
+
+            DB::commit();
+
+            return $this->sendResponse([], Response::HTTP_NO_CONTENT);
+        } catch (Exception $exception) {
+            Log::error($exception);
+
+            return $this->sendError('Something went wrong, please contact administrator!', [], Response::HTTP_INTERNAL_SERVER_ERROR);
+        }
+    }
+
 }

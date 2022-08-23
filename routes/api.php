@@ -25,14 +25,15 @@ Route::post("/verify-email", [UserController::class, "verifyEmail"]);
 
 Route::middleware(['auth:sanctum'])->group(function () {
     Route::get("/user", [UserController::class, "getUser"]);
-    Route::get("/getUserBoards", [UserController::class, "getUserBoards"]);
+    Route::get("/get-user-boards", [UserController::class, "getUserBoards"]);
 
-    Route::post("/createboard", [BoardController::class, "createBoard"]);
-    Route::put("/updateBoard/{id}", [BoardController::class, "updateBoard"]);
-    Route::delete("/deleteBoard/{id}", [BoardController::class, "deleteBoard"]);
+    Route::post("/create-board", [BoardController::class, "add"]);
+    Route::put("/update-board/{id}", [BoardController::class, "update"]);
+    Route::delete("/delete-board/{id}", [BoardController::class, "delete"]);
 
     Route::post("/create-status", [StatusController::class, "add"]);
-    Route::post("/get-statuses", [StatusController::class, "getAll"]);
-    Route::post("/get-status/{id}", [StatusController::class, "get"]);
-    Route::post("/update-status/{id}", [StatusController::class, "update"]);
+    Route::get("/get-statuses", [StatusController::class, "getAll"]);
+    Route::get("/get-status/{id}", [StatusController::class, "get"]);
+    Route::put("/update-status/{id}", [StatusController::class, "update"]);
+    Route::delete("/delete-status/{id}", [StatusController::class, "delete"]);
 });
