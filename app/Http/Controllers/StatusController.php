@@ -2,6 +2,7 @@
 
 namespace App\Http\Controllers;
 
+use App\Models\BoardMembers;
 use App\Models\Status;
 use Illuminate\Http\Request;
 use Illuminate\Support\Facades\Validator;
@@ -9,6 +10,7 @@ use Illuminate\Http\JsonResponse;
 use Illuminate\Http\Response;
 use Illuminate\Support\Facades\Log;
 use Exception;
+use Illuminate\Support\Facades\Auth;
 use Illuminate\Support\Facades\DB;
 
 class StatusController extends ApiController
@@ -83,14 +85,18 @@ class StatusController extends ApiController
     {
         try {
             $status = Status::find($id);
-
+            $user = Auth::user();
+            if($user->id!=$status->board->owner_id)
+            {
+                return $this->sendError("Not allowed to update this status", [], Response::HTTP_METHOD_NOT_ALLOWED);
+            }
+            
             if (!$status) {
                 return $this->sendError('status not found!', [], Response::HTTP_NOT_FOUND);
             }
 
             $validator = Validator::make($request->all(), [
                 'name' => 'required|max:50',
-                'board_id' => 'nullable|exists:boards,id'
             ]);
 
             if ($validator->fails()) {
@@ -98,11 +104,9 @@ class StatusController extends ApiController
             }
 
             $name = $request->get('name');
-            $board_id = $request->get('board_id');
 
 
             $status->name = $name;
-            $status->board_id = $board_id;
             $status->save();
 
             return $this->sendResponse($status->toArray());

@@ -32,4 +32,13 @@ class Status extends Model
     protected $hidden = [
         'timestamps'
     ];
+
+    public function tasks()
+    {
+    }
+
+    public function board()
+    {
+        return $this->belongsTo(Board::class, 'board_id');
+    }
 }
