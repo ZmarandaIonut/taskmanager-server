@@ -5,6 +5,8 @@ namespace App\Http\Controllers;
 use App\Models\Board;
 use App\Models\BoardMembers;
 use App\Models\Boards;
+use App\Models\User;
+use App\Notifications\VerifyEmail;
 use Exception;
 use Illuminate\Http\Request;
 use Illuminate\Support\Facades\Validator;
@@ -59,19 +61,9 @@ class BoardController extends ApiController
 
             $user = Auth::user();
 
-            $boardMembers = $board->getMembers;
-            $foundUser = false;
-            if ($boardMembers) {
-                foreach ($boardMembers as $member) {
-                    if ($member->id === $user->id) {
-                        if ($member->role !== "Admin") {
-                            return $this->sendError("Not allowed to update this board", [], Response::HTTP_METHOD_NOT_ALLOWED);
-                        }
-                        $foundUser = true;
-                    }
-                }
-            }
-            if (!$foundUser) {
+            $foundUser = BoardMembers::where("board_id", $id)->where("user_id", $user->id)->first();
+
+            if (!$foundUser || $foundUser->role !== "Admin") {
                 return $this->sendError("Not allowed to update this board", [], Response::HTTP_METHOD_NOT_ALLOWED);
             }
 

@@ -19,7 +19,7 @@ return new class extends Migration
             $table->bigInteger("owner_id")->unsigned();
             $table->foreign("owner_id")->references("id")->on("users")->onDelete("cascade");
             $table->string("slug");
-            $table->tinyInteger("isArhived")->default(0);
+            $table->tinyInteger("isArchived")->default(0);
             $table->timestamps();
         });
     }
