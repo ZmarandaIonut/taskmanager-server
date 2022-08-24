@@ -33,12 +33,14 @@ class Status extends Model
         'timestamps'
     ];
 
-    public function tasks()
-    {
-    }
-
     public function board()
     {
         return $this->belongsTo(Board::class, 'board_id');
     }
+
+    public function tasks()
+    {
+        return $this->hasMany(Task::class, 'status_id');
+    }
+
 }

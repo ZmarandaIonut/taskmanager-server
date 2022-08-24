@@ -21,7 +21,7 @@ class BoardFactory extends Factory
             'name' => 'Board ' . strtoupper(fake()->randomLetter()) . fake()->randomLetter() . ' ' . fake()->randomNumber(2),
             'owner_id' => User::inRandomOrder()->first()->id,
             'slug' => fake()->text(5),
-            'isArhived'=>rand(0,1)
+            'isArchived'=>rand(0,1)
         ];
     }
 }

@@ -18,5 +18,7 @@ class DatabaseSeeder extends Seeder
         \App\Models\Board::factory(10)->create();
         \App\Models\Status::factory(10)->create();
         \App\Models\BoardMembers::factory(10)->create();
+        \App\Models\Task::factory(10)->create();
+        \App\Models\TaskAssignedTo::factory(10)->create();
     }
 }
