@@ -31,6 +31,7 @@ Route::middleware(['auth:sanctum'])->group(function () {
 
     Route::post("/create-board", [BoardController::class, "add"]);
     Route::put("/update-board/{id}", [BoardController::class, "update"]);
+    Route::post("/send-invite", [BoardController::class, "sendInvite"]);
     Route::delete("/delete-board/{id}", [BoardController::class, "delete"]);
 
     Route::post("/create-status", [StatusController::class, "add"]);
