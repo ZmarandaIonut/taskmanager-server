@@ -2,11 +2,11 @@
 
 namespace App\Http\Controllers;
 
+use App\Models\BoardMembers;
 use App\Models\Status;
 use App\Models\Task;
 use Illuminate\Http\Request;
 use Illuminate\Support\Facades\Validator;
-use Illuminate\Http\JsonResponse;
 use Illuminate\Http\Response;
 use Illuminate\Support\Facades\Log;
 use Exception;
@@ -15,7 +15,7 @@ use Illuminate\Support\Facades\DB;
 
 class TaskController extends ApiController
 {
-    public function add(Request $request): JsonResponse
+    public function add(Request $request)
     {
         try {
 
@@ -40,16 +40,16 @@ class TaskController extends ApiController
         }
     }
 
-    public function getAllTasksForStatus($statusId): JsonResponse
+    public function getAllTasksForStatus($statusId)
     {
         try {
-            //$tasks = Task::where('status_id', $statusId)->get();
             $status = Status::find($statusId);
             $tasks = $status->tasks;
 
             if (!$tasks) {
                 return $this->sendError('tasks not found!', [], Response::HTTP_NOT_FOUND);
             }
+
             return $this->sendResponse($tasks->toArray());
         } catch (Exception $exception) {
             Log::error($exception);
@@ -58,7 +58,7 @@ class TaskController extends ApiController
         }
     }
 
-    public function get($id): JsonResponse
+    public function get($id)
     {
         try {
             $task = Task::find($id);
@@ -75,7 +75,7 @@ class TaskController extends ApiController
         }
     }
 
-    public function update($id, Request $request): JsonResponse
+    public function update($id, Request $request)
     {
         try {
             $task = Task::find($id);
@@ -110,7 +110,7 @@ class TaskController extends ApiController
         }
     }
 
-    public function delete($id): JsonResponse
+    public function delete($id)
     {
         try {
             $task = Task::find($id);
@@ -137,6 +137,31 @@ class TaskController extends ApiController
         }
     }
 
-    
-    
+    public function archive($id)
+    {
+        try {
+            $task = Task::find($id);
+            $user = Auth::user();
+
+            $foundUser = BoardMembers::where("board_id", $task->status->board->id)->where("user_id", $user->id)->first();
+
+            if (!$foundUser || $foundUser->role != BoardMembers::ADMIN) {
+                return $this->sendError("Not allowed to update this task", [], Response::HTTP_METHOD_NOT_ALLOWED);
+            }
+
+            if (!$task) {
+                return $this->sendError('task not found!', [], Response::HTTP_NOT_FOUND);
+            }
+
+            $task->isArchived = $task->isArchived ? false : true;
+            $task->save();
+
+            return $this->sendResponse($task->toArray());
+        } catch (Exception $exception) {
+            Log::error($exception);
+
+            return $this->sendError('Something went wrong, please contact administrator!', [], Response::HTTP_INTERNAL_SERVER_ERROR);
+        }
+    }
+
 }

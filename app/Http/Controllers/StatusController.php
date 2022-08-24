@@ -3,11 +3,9 @@
 namespace App\Http\Controllers;
 
 use App\Models\Board;
-use App\Models\BoardMembers;
 use App\Models\Status;
 use Illuminate\Http\Request;
 use Illuminate\Support\Facades\Validator;
-use Illuminate\Http\JsonResponse;
 use Illuminate\Http\Response;
 use Illuminate\Support\Facades\Log;
 use Exception;
@@ -16,7 +14,7 @@ use Illuminate\Support\Facades\DB;
 
 class StatusController extends ApiController
 {
-    public function add(Request $request): JsonResponse
+    public function add(Request $request)
     {
         try {
             $validate = Validator::make($request->all(), [
@@ -40,11 +38,8 @@ class StatusController extends ApiController
         }
     }
 
-    /**
-     * @param Request $request
-     * @return JsonResponse
-     */
-    public function getAllStatusesForBoard($boardId): JsonResponse
+
+    public function getAllStatusesForBoard($boardId)
     {
         try {
             //$statuses = Status::where('board_id', $boardId)->get();
@@ -62,7 +57,7 @@ class StatusController extends ApiController
         }
     }
 
-    public function get($id): JsonResponse
+    public function get($id)
     {
         try {
 
@@ -80,7 +75,7 @@ class StatusController extends ApiController
         }
     }
 
-    public function update($id, Request $request): JsonResponse
+    public function update($id, Request $request)
     {
         try {
             $status = Status::find($id);
@@ -115,7 +110,7 @@ class StatusController extends ApiController
         }
     }
 
-    public function delete($id): JsonResponse
+    public function delete($id)
     {
         try {
             $status = Status::find($id);
