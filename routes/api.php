@@ -2,6 +2,8 @@
 
 use App\Http\Controllers\BoardController;
 use App\Http\Controllers\StatusController;
+use App\Http\Controllers\TaskAssignedToController;
+use App\Http\Controllers\TaskController;
 use Illuminate\Http\Request;
 use Illuminate\Support\Facades\Route;
 use App\Http\Controllers\UserController;
@@ -32,8 +34,16 @@ Route::middleware(['auth:sanctum'])->group(function () {
     Route::delete("/delete-board/{id}", [BoardController::class, "delete"]);
 
     Route::post("/create-status", [StatusController::class, "add"]);
-    Route::get("/get-statuses", [StatusController::class, "getAll"]);
+    Route::get("/get-statuses/{id}", [StatusController::class, "getAllStatusesForBoard"]);
     Route::get("/get-status/{id}", [StatusController::class, "get"]);
     Route::put("/update-status/{id}", [StatusController::class, "update"]);
     Route::delete("/delete-status/{id}", [StatusController::class, "delete"]);
+
+    Route::post("/create-task", [TaskController::class, "add"]);
+    Route::get("/get-tasks/{id}", [TaskController::class, "getAllTasksForStatus"]);
+    Route::get("/get-task/{id}", [TaskController::class, "get"]);
+    Route::put("/update-task/{id}", [TaskController::class, "update"]);
+    Route::delete("/delete-task/{id}", [TaskController::class, "delete"]);
+
+    Route::put("/change-task-status/{id}", [TaskAssignedToController::class, "changeTaskStatus"]);
 });

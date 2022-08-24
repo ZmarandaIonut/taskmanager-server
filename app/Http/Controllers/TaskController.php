@@ -2,9 +2,8 @@
 
 namespace App\Http\Controllers;
 
-use App\Models\Board;
-use App\Models\BoardMembers;
 use App\Models\Status;
+use App\Models\Task;
 use Illuminate\Http\Request;
 use Illuminate\Support\Facades\Validator;
 use Illuminate\Http\JsonResponse;
@@ -14,47 +13,44 @@ use Exception;
 use Illuminate\Support\Facades\Auth;
 use Illuminate\Support\Facades\DB;
 
-class StatusController extends ApiController
+class TaskController extends ApiController
 {
     public function add(Request $request): JsonResponse
     {
         try {
+
             $validate = Validator::make($request->all(), [
                 'name' => 'required|max:50',
-                'board_id' => 'required|exists:boards,id',
+                'status_id' => 'required|exists:statuses,id',
             ]);
             if ($validate->fails()) {
                 return $this->sendError("Bad request", $validate->messages()->toArray());
             }
 
-            $status = new Status();
-            $status->name = $request->get("name");
-            $status->board_id = $request->get("board_id");
+            $task = new Task();
+            $task->name = $request->get("name");
+            $task->status_id = $request->get("status_id");
 
-            $status->save();
+            $task->save();
 
-            return $this->sendResponse($status->toArray(), Response::HTTP_CREATED);
+            return $this->sendResponse($task->toArray(), Response::HTTP_CREATED);
         } catch (Exception $exception) {
             Log::error($exception);
             return $this->sendError('Something went wrong, please contact administrator!', [], Response::HTTP_INTERNAL_SERVER_ERROR);
         }
     }
 
-    /**
-     * @param Request $request
-     * @return JsonResponse
-     */
-    public function getAllStatusesForBoard($boardId): JsonResponse
+    public function getAllTasksForStatus($statusId): JsonResponse
     {
         try {
-            //$statuses = Status::where('board_id', $boardId)->get();
-            $board = Board::find($boardId);
-            $statuses = $board->statuses;
+            //$tasks = Task::where('status_id', $statusId)->get();
+            $status = Status::find($statusId);
+            $tasks = $status->tasks;
 
-            if (!$statuses) {
-                return $this->sendError('statuses not found!', [], Response::HTTP_NOT_FOUND);
+            if (!$tasks) {
+                return $this->sendError('tasks not found!', [], Response::HTTP_NOT_FOUND);
             }
-            return $this->sendResponse($statuses->toArray());
+            return $this->sendResponse($tasks->toArray());
         } catch (Exception $exception) {
             Log::error($exception);
 
@@ -65,14 +61,13 @@ class StatusController extends ApiController
     public function get($id): JsonResponse
     {
         try {
+            $task = Task::find($id);
 
-            $status = Status::find($id);
-
-            if (!$status) {
-                return $this->sendError('status not found!', [], Response::HTTP_NOT_FOUND);
+            if (!$task) {
+                return $this->sendError('task not found!', [], Response::HTTP_NOT_FOUND);
             }
 
-            return $this->sendResponse($status->toArray());
+            return $this->sendResponse($task->toArray());
         } catch (Exception $exception) {
             Log::error($exception);
 
@@ -83,14 +78,14 @@ class StatusController extends ApiController
     public function update($id, Request $request): JsonResponse
     {
         try {
-            $status = Status::find($id);
+            $task = Task::find($id);
             $user = Auth::user();
-            if ($user->id != $status->board->owner_id) {
-                return $this->sendError("Not allowed to update this status", [], Response::HTTP_METHOD_NOT_ALLOWED);
+            if ($user->id != $task->status->board->owner_id) {
+                return $this->sendError("Not allowed to update this task", [], Response::HTTP_METHOD_NOT_ALLOWED);
             }
 
-            if (!$status) {
-                return $this->sendError('status not found!', [], Response::HTTP_NOT_FOUND);
+            if (!$task) {
+                return $this->sendError('task not found!', [], Response::HTTP_NOT_FOUND);
             }
 
             $validator = Validator::make($request->all(), [
@@ -104,10 +99,10 @@ class StatusController extends ApiController
             $name = $request->get('name');
 
 
-            $status->name = $name;
-            $status->save();
+            $task->name = $name;
+            $task->save();
 
-            return $this->sendResponse($status->toArray());
+            return $this->sendResponse($task->toArray());
         } catch (Exception $exception) {
             Log::error($exception);
 
@@ -118,15 +113,19 @@ class StatusController extends ApiController
     public function delete($id): JsonResponse
     {
         try {
-            $status = Status::find($id);
+            $task = Task::find($id);
+            $user = Auth::user();
+            if ($user->id != $task->status->board->owner_id) {
+                return $this->sendError("Not allowed to update this task", [], Response::HTTP_METHOD_NOT_ALLOWED);
+            }
 
-            if (!$status) {
-                return $this->sendError('status not found!', [], Response::HTTP_NOT_FOUND);
+            if (!$task) {
+                return $this->sendError('task not found!', [], Response::HTTP_NOT_FOUND);
             }
 
             DB::beginTransaction();
 
-            $status->delete();
+            $task->delete();
 
             DB::commit();
 
@@ -137,4 +136,7 @@ class StatusController extends ApiController
             return $this->sendError('Something went wrong, please contact administrator!', [], Response::HTTP_INTERNAL_SERVER_ERROR);
         }
     }
+
+    
+    
 }

@@ -15,4 +15,9 @@ class Board extends Model
     {
         return $this->hasMany(BoardMembers::class, 'board_id', 'id');
     }
+
+    public function statuses()
+    {
+        return $this->hasMany(Status::class, 'board_id');
+    }
 }
