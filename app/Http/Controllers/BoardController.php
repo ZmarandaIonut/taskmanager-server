@@ -3,6 +3,7 @@
 namespace App\Http\Controllers;
 
 use App\Models\Board;
+use App\Models\BoardGuestsUsers;
 use App\Models\BoardInvites;
 use App\Models\BoardMembers;
 use App\Models\Boards;
@@ -21,6 +22,7 @@ use Illuminate\Support\Facades\DB;
 use Illuminate\Support\Facades\Log;
 use Illuminate\Support\Facades\Notification as FacadesNotification;
 use Illuminate\Support\Str;
+use \Laravel\Sanctum\PersonalAccessToken;
 
 class BoardController extends ApiController
 {
@@ -126,6 +128,20 @@ class BoardController extends ApiController
                 return $this->sendError($validate->messages()->toArray());
             }
             $authUser = Auth::user();
+            $getInvitedUser = User::where("email", $request->get("email"))->first();
+
+            if (!$getInvitedUser) {
+                $foundInvitedGuestAsMember = BoardGuestsUsers::where("board_id", $request->get("board_id"))->where("email", $request->get("email"))->first();
+                if ($foundInvitedGuestAsMember) {
+                    return $this->sendError("This guest user already is a board member!", [], Response::HTTP_NOT_ACCEPTABLE);
+                }
+            } else {
+                $foundInvitedUserAsMemeber = BoardMembers::where("board_id", $request->get("board_id"))->where("user_id", $getInvitedUser->id)->first();
+
+                if ($foundInvitedUserAsMemeber) {
+                    return $this->sendError("User already is a board member!", [], Response::HTTP_NOT_ACCEPTABLE);
+                }
+            }
             $foundUser = BoardMembers::where("board_id", $request->get("board_id"))->where("user_id", $authUser->id)->first();
 
             if (!$foundUser || $foundUser->role !== "Admin") {
@@ -138,7 +154,7 @@ class BoardController extends ApiController
 
             if ($lastUserboardInvite) {
                 if ($lastUserboardInvite->created_at > Carbon::now()->subHour()) {
-                    return $this->sendError('Your can invite this user again after 1 hour!', [], Response::HTTP_NOT_ACCEPTABLE);
+                    return $this->sendError('You can invite this user again after 1 hour!', [], Response::HTTP_NOT_ACCEPTABLE);
                 }
             }
 
@@ -154,6 +170,48 @@ class BoardController extends ApiController
             return $this->sendResponse(['Code for joining the board has been sent to the user email.']);
         } catch (Exception $exception) {
             error_log($exception);
+            return $this->sendError('Something went wrong, please contact administrator!', [], Response::HTTP_INTERNAL_SERVER_ERROR);
+        }
+    }
+    public function acceptInvite(Request $request)
+    {
+        try {
+            $validate = Validator::make($request->all(), [
+                'email' => 'required|email',
+                'code' => 'required'
+            ]);
+
+            if ($validate->fails()) {
+                return $this->sendError($validate->messages()->toArray());
+            }
+            $checkUser = BoardInvites::where("code", $request->get("code"))->first();
+            if (!$checkUser) {
+                return $this->sendError("Invalid code", []);
+            }
+            $isUser = User::where("email", $request->get("email"))->first();
+            if ($isUser) {
+                if ($isUser->email !== $checkUser->email) {
+                    return $this->sendError("Not allowed to use this code", [], Response::HTTP_NOT_ACCEPTABLE);
+                }
+
+                $boardMember = new BoardMembers();
+                $boardMember->board_id = $checkUser->board_id;
+                $boardMember->user_id = $isUser->id;
+                $boardMember->save();
+            } else {
+                if ($checkUser->email !== $request->get("email")) {
+                    return $this->sendError("Not allowed to use this code", [], Response::HTTP_NOT_ACCEPTABLE);
+                }
+                $guestUser = new BoardGuestsUsers();
+                $guestUser->board_id = $checkUser->board_id;
+                $guestUser->email = $request->get("email");
+                $guestUser->save();
+            }
+
+            $checkUser->delete();
+
+            return $this->sendResponse(["You successfully joined the board!"]);
+        } catch (Exception $exception) {
             return $this->sendError('Something went wrong, please contact administrator!', [], Response::HTTP_INTERNAL_SERVER_ERROR);
         }
     }

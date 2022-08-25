@@ -24,6 +24,7 @@ Route::post("/register", [UserController::class, "register"]);
 Route::post("/login", [UserController::class, "login"]);
 Route::post("/verify-email", [UserController::class, "verifyEmail"]);
 
+Route::post("/accept-board-invite", [BoardController::class, "acceptInvite"]); // can be used by guests & users
 
 Route::middleware(['auth:sanctum'])->group(function () {
     Route::get("/user", [UserController::class, "getUser"]);
