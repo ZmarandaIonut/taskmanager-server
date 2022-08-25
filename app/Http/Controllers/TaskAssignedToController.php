@@ -5,7 +5,6 @@ namespace App\Http\Controllers;
 use App\Models\BoardMembers;
 use App\Models\Task;
 use App\Models\TaskAssignedTo;
-use Illuminate\Http\JsonResponse;
 use Illuminate\Http\Response;
 use Illuminate\Support\Facades\Log;
 use Illuminate\Support\Facades\Auth;
@@ -13,7 +12,7 @@ use Exception;
 
 class TaskAssignedToController extends ApiController
 {
-    public function changeTaskStatus($id): JsonResponse
+    public function changeTaskStatus($id)
     {
         try {
             $task = Task::find($id);

@@ -34,6 +34,7 @@ Route::middleware(['auth:sanctum'])->group(function () {
     Route::put("/update-board/{id}", [BoardController::class, "update"]);
     Route::post("/send-invite", [BoardController::class, "sendInvite"]);
     Route::delete("/delete-board/{id}", [BoardController::class, "delete"]);
+    Route::put("/archive-board/{id}", [BoardController::class, "archive"]);
 
     Route::post("/create-status", [StatusController::class, "add"]);
     Route::get("/get-statuses/{id}", [StatusController::class, "getAllStatusesForBoard"]);
@@ -46,6 +47,7 @@ Route::middleware(['auth:sanctum'])->group(function () {
     Route::get("/get-task/{id}", [TaskController::class, "get"]);
     Route::put("/update-task/{id}", [TaskController::class, "update"]);
     Route::delete("/delete-task/{id}", [TaskController::class, "delete"]);
+    Route::put("/archive-task/{id}", [TaskController::class, "archive"]);
 
     Route::put("/change-task-status/{id}", [TaskAssignedToController::class, "changeTaskStatus"]);
 });

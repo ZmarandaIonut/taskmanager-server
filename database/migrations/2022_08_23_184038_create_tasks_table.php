@@ -15,9 +15,10 @@ return new class extends Migration
     {
         Schema::create('tasks', function (Blueprint $table) {
             $table->id();
+            $table->string("name");
             $table->bigInteger("status_id")->unsigned();
             $table->foreign("status_id")->references("id")->on("statuses")->onDelete("cascade");
-            $table->string("name");
+            $table->boolean("isArchived")->default(false);
             $table->timestamps();
         });
     }

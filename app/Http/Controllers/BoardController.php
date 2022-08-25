@@ -7,6 +7,7 @@ use App\Models\BoardGuestsUsers;
 use App\Models\BoardInvites;
 use App\Models\BoardMembers;
 use App\Models\Boards;
+use App\Models\Task;
 use App\Models\User;
 use App\Notifications\SendBoardInvite;
 use App\Notifications\VerifyEmail;
@@ -117,6 +118,34 @@ class BoardController extends ApiController
             return $this->sendError('Something went wrong, please contact administrator!', [], Response::HTTP_INTERNAL_SERVER_ERROR);
         }
     }
+
+    public function archive($id)
+    {
+        try {
+            $board = Board::find($id);
+            $user = Auth::user();
+
+            $foundUser = BoardMembers::where("board_id", $id)->where("user_id", $user->id)->first();
+
+            if (!$foundUser || $foundUser->role != BoardMembers::ADMIN) {
+                return $this->sendError("Not allowed to update this board", [], Response::HTTP_METHOD_NOT_ALLOWED);
+            }
+
+            if (!$board) {
+                return $this->sendError('Board not found!', [], Response::HTTP_NOT_FOUND);
+            }
+
+            $board->isArchived = $board->isArchived ? false : true;
+            $board->save();
+
+            return $this->sendResponse($board->toArray());
+        } catch (Exception $exception) {
+            Log::error($exception);
+
+            return $this->sendError('Something went wrong, please contact administrator!', [], Response::HTTP_INTERNAL_SERVER_ERROR);
+        }
+    }
+
     public function sendInvite(Request $request)
     {
         try {
