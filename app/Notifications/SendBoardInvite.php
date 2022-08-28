@@ -46,7 +46,7 @@ class SendBoardInvite extends Notification
         return (new MailMessage)
             ->subject("Board invite code")
             ->line("{$this->sendBy} has invited you to join his board.")
-            ->line("The code for joining his table is: {$this->code}");
+            ->line("The code for joining his board is: {$this->code}");
     }
 
     /**

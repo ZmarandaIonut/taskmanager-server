@@ -26,6 +26,14 @@ class TaskController extends ApiController
             if ($validate->fails()) {
                 return $this->sendError("Bad request", $validate->messages()->toArray());
             }
+            $status = Status::find($request->get("status_id"));
+
+            $authUser = Auth::user();
+            $foundUser = BoardMembers::where("board_id", $status->board->id)->where("user_id", $authUser->id)->first();
+
+            if (!$foundUser || $foundUser->role !== "Admin") {
+                return $this->sendError("Not allowed to perform this action", [], Response::HTTP_METHOD_NOT_ALLOWED);
+            }
 
             $task = new Task();
             $task->name = $request->get("name");
@@ -50,6 +58,13 @@ class TaskController extends ApiController
                 return $this->sendError('tasks not found!', [], Response::HTTP_NOT_FOUND);
             }
 
+            $authUser = Auth::user();
+            $foundUser = BoardMembers::where("board_id", $status->board->id)->where("user_id", $authUser->id)->first();
+
+            if (!$foundUser) {
+                return $this->sendError("Not allowed to perform this action", [], Response::HTTP_METHOD_NOT_ALLOWED);
+            }
+
             return $this->sendResponse($tasks->toArray());
         } catch (Exception $exception) {
             Log::error($exception);
@@ -58,30 +73,33 @@ class TaskController extends ApiController
         }
     }
 
-    public function get($id)
-    {
-        try {
-            $task = Task::find($id);
+    // public function get($id)
+    // {
+    //     try {
+    //         $task = Task::find($id);
 
-            if (!$task) {
-                return $this->sendError('task not found!', [], Response::HTTP_NOT_FOUND);
-            }
+    //         if (!$task) {
+    //             return $this->sendError('task not found!', [], Response::HTTP_NOT_FOUND);
+    //         }
 
-            return $this->sendResponse($task->toArray());
-        } catch (Exception $exception) {
-            Log::error($exception);
+    //         return $this->sendResponse($task->toArray());
+    //     } catch (Exception $exception) {
+    //         Log::error($exception);
 
-            return $this->sendError('Something went wrong, please contact administrator!', [], Response::HTTP_INTERNAL_SERVER_ERROR);
-        }
-    }
+    //         return $this->sendError('Something went wrong, please contact administrator!', [], Response::HTTP_INTERNAL_SERVER_ERROR);
+    //     }
+    // }
 
     public function update($id, Request $request)
     {
         try {
             $task = Task::find($id);
-            $user = Auth::user();
-            if ($user->id != $task->status->board->owner_id) {
-                return $this->sendError("Not allowed to update this task", [], Response::HTTP_METHOD_NOT_ALLOWED);
+
+            $authUser = Auth::user();
+            $foundUser = BoardMembers::where("board_id", $task->status->board->id)->where("user_id", $authUser->id)->first();
+
+            if (!$foundUser || $foundUser->role !== "Admin") {
+                return $this->sendError("Not allowed to perform this action", [], Response::HTTP_METHOD_NOT_ALLOWED);
             }
 
             if (!$task) {
@@ -115,12 +133,15 @@ class TaskController extends ApiController
         try {
             $task = Task::find($id);
             $user = Auth::user();
-            if ($user->id != $task->status->board->owner_id) {
-                return $this->sendError("Not allowed to update this task", [], Response::HTTP_METHOD_NOT_ALLOWED);
-            }
 
             if (!$task) {
                 return $this->sendError('task not found!', [], Response::HTTP_NOT_FOUND);
+            }
+
+            $foundUser = BoardMembers::where("board_id", $task->status->board->id)->where("user_id", $user->id)->first();
+
+            if (!$foundUser || $foundUser->role !== "Admin") {
+                return $this->sendError("Not allowed to perform this action", [], Response::HTTP_METHOD_NOT_ALLOWED);
             }
 
             DB::beginTransaction();
@@ -143,10 +164,10 @@ class TaskController extends ApiController
             $task = Task::find($id);
             $user = Auth::user();
 
-            $foundUser = BoardMembers::where("board_id", $task->status->board->id)->where("user_id", $user->id)->first();
+            $boardOwnerId = $task->status->board->owner_id;
 
-            if (!$foundUser || $foundUser->role != BoardMembers::ADMIN) {
-                return $this->sendError("Not allowed to update this task", [], Response::HTTP_METHOD_NOT_ALLOWED);
+            if ($user->id != $boardOwnerId) {
+                return $this->sendError("Not allowed to perform this action", [], Response::HTTP_METHOD_NOT_ALLOWED);
             }
 
             if (!$task) {
@@ -163,5 +184,4 @@ class TaskController extends ApiController
             return $this->sendError('Something went wrong, please contact administrator!', [], Response::HTTP_INTERNAL_SERVER_ERROR);
         }
     }
-
 }

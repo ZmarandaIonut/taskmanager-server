@@ -3,6 +3,7 @@
 namespace App\Http\Controllers;
 
 use App\Models\Board;
+use App\Models\BoardMembers;
 use App\Models\Status;
 use Illuminate\Http\Request;
 use Illuminate\Support\Facades\Validator;
@@ -23,6 +24,13 @@ class StatusController extends ApiController
             ]);
             if ($validate->fails()) {
                 return $this->sendError("Bad request", $validate->messages()->toArray());
+            }
+
+            $authUser = Auth::user();
+            $foundUser = BoardMembers::where("board_id", $request->get("board_id"))->where("user_id", $authUser->id)->first();
+
+            if (!$foundUser || $foundUser->role !== "Admin") {
+                return $this->sendError("Not allowed to perform this action", [], Response::HTTP_METHOD_NOT_ALLOWED);
             }
 
             $status = new Status();
@@ -49,6 +57,13 @@ class StatusController extends ApiController
             if (!$statuses) {
                 return $this->sendError('statuses not found!', [], Response::HTTP_NOT_FOUND);
             }
+            $authUser = Auth::user();
+            $foundUser = BoardMembers::where("board_id", $boardId)->where("user_id", $authUser->id)->first();
+
+            if (!$foundUser) {
+                return $this->sendError("Not allowed to perform this action", [], Response::HTTP_METHOD_NOT_ALLOWED);
+            }
+
             return $this->sendResponse($statuses->toArray());
         } catch (Exception $exception) {
             Log::error($exception);
@@ -57,32 +72,28 @@ class StatusController extends ApiController
         }
     }
 
-    public function get($id)
-    {
-        try {
+    // public function get($id)
+    // {
+    //     try {
 
-            $status = Status::find($id);
+    //         $status = Status::find($id);
 
-            if (!$status) {
-                return $this->sendError('status not found!', [], Response::HTTP_NOT_FOUND);
-            }
+    //         if (!$status) {
+    //             return $this->sendError('status not found!', [], Response::HTTP_NOT_FOUND);
+    //         }
 
-            return $this->sendResponse($status->toArray());
-        } catch (Exception $exception) {
-            Log::error($exception);
+    //         return $this->sendResponse($status->toArray());
+    //     } catch (Exception $exception) {
+    //         Log::error($exception);
 
-            return $this->sendError('Something went wrong, please contact administrator!', [], Response::HTTP_INTERNAL_SERVER_ERROR);
-        }
-    }
+    //         return $this->sendError('Something went wrong, please contact administrator!', [], Response::HTTP_INTERNAL_SERVER_ERROR);
+    //     }
+    // }
 
     public function update($id, Request $request)
     {
         try {
             $status = Status::find($id);
-            $user = Auth::user();
-            if ($user->id != $status->board->owner_id) {
-                return $this->sendError("Not allowed to update this status", [], Response::HTTP_METHOD_NOT_ALLOWED);
-            }
 
             if (!$status) {
                 return $this->sendError('status not found!', [], Response::HTTP_NOT_FOUND);
@@ -94,6 +105,13 @@ class StatusController extends ApiController
 
             if ($validator->fails()) {
                 return $this->sendError('Bad request!', $validator->messages()->toArray());
+            }
+
+            $authUser = Auth::user();
+            $foundUser = BoardMembers::where("board_id", $status->board->id)->where("user_id", $authUser->id)->first();
+
+            if (!$foundUser || $foundUser->role !== "Admin") {
+                return $this->sendError("Not allowed to perform this action", [], Response::HTTP_METHOD_NOT_ALLOWED);
             }
 
             $name = $request->get('name');
@@ -117,6 +135,13 @@ class StatusController extends ApiController
 
             if (!$status) {
                 return $this->sendError('status not found!', [], Response::HTTP_NOT_FOUND);
+            }
+
+            $authUser = Auth::user();
+            $foundUser = BoardMembers::where("board_id", $status->board->id)->where("user_id", $authUser->id)->first();
+
+            if (!$foundUser || $foundUser->role !== "Admin") {
+                return $this->sendError("Not allowed to perform this action", [], Response::HTTP_METHOD_NOT_ALLOWED);
             }
 
             DB::beginTransaction();

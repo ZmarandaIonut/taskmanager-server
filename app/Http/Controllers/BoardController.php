@@ -3,7 +3,6 @@
 namespace App\Http\Controllers;
 
 use App\Models\Board;
-use App\Models\BoardGuestsUsers;
 use App\Models\BoardInvites;
 use App\Models\BoardMembers;
 use App\Models\Boards;
@@ -33,15 +32,15 @@ class BoardController extends ApiController
         try {
             $validate = Validator::make($request->all(), [
                 'name' => 'required|max:50',
-                'owner_id' => 'required|exists:users,id',
             ]);
             if ($validate->fails()) {
                 return $this->sendError("Bad request", $validate->messages()->toArray());
             }
+            $authUser = Auth::user();
 
             $board = new Board();
             $board->name = $request->get("name");
-            $board->owner_id = $request->get("owner_id");
+            $board->owner_id = $authUser->id;
             $board->slug = Str::random(15);
 
             $board->save();
@@ -69,12 +68,11 @@ class BoardController extends ApiController
                 return $this->sendError("Board not found", [], Response::HTTP_NOT_FOUND);
             }
 
-            $user = Auth::user();
-
-            $foundUser = BoardMembers::where("board_id", $id)->where("user_id", $user->id)->first();
+            $authUser = Auth::user();
+            $foundUser = BoardMembers::where("board_id", $id)->where("user_id", $authUser->id)->first();
 
             if (!$foundUser || $foundUser->role !== "Admin") {
-                return $this->sendError("Not allowed to update this board", [], Response::HTTP_METHOD_NOT_ALLOWED);
+                return $this->sendError("Not allowed to perform this action", [], Response::HTTP_METHOD_NOT_ALLOWED);
             }
 
             $validate = Validator::make($request->all(), [
@@ -127,8 +125,8 @@ class BoardController extends ApiController
 
             $foundUser = BoardMembers::where("board_id", $id)->where("user_id", $user->id)->first();
 
-            if (!$foundUser || $foundUser->role != BoardMembers::ADMIN) {
-                return $this->sendError("Not allowed to update this board", [], Response::HTTP_METHOD_NOT_ALLOWED);
+            if (!$foundUser || ($user->id !== $board->owner_id)) {
+                return $this->sendError("Not allowed to perform this action", [], Response::HTTP_METHOD_NOT_ALLOWED);
             }
 
             if (!$board) {
@@ -157,26 +155,22 @@ class BoardController extends ApiController
                 return $this->sendError($validate->messages()->toArray());
             }
             $authUser = Auth::user();
+
+            $foundUser = BoardMembers::where("board_id", $request->get("board_id"))->where("user_id", $authUser->id)->first();
+
+            if (!$foundUser || $foundUser->role !== "Admin") {
+                return $this->sendError("Not allowed to perform this action", [], Response::HTTP_METHOD_NOT_ALLOWED);
+            }
+
             $getInvitedUser = User::where("email", $request->get("email"))->first();
 
-            if (!$getInvitedUser) {
-                $foundInvitedGuestAsMember = BoardGuestsUsers::where("board_id", $request->get("board_id"))->where("email", $request->get("email"))->first();
-                if ($foundInvitedGuestAsMember) {
-                    return $this->sendError("This guest user already is a board member!", [], Response::HTTP_NOT_ACCEPTABLE);
-                }
-            } else {
+            if ($getInvitedUser) {
                 $foundInvitedUserAsMemeber = BoardMembers::where("board_id", $request->get("board_id"))->where("user_id", $getInvitedUser->id)->first();
 
                 if ($foundInvitedUserAsMemeber) {
                     return $this->sendError("User already is a board member!", [], Response::HTTP_NOT_ACCEPTABLE);
                 }
             }
-            $foundUser = BoardMembers::where("board_id", $request->get("board_id"))->where("user_id", $authUser->id)->first();
-
-            if (!$foundUser || $foundUser->role !== "Admin") {
-                return $this->sendError("Not allowed to invite users to this board", [], Response::HTTP_METHOD_NOT_ALLOWED);
-            }
-
             $lastUserboardInvite = BoardInvites::where('email', $request->get('email'))
                 ->orderBy('created_at', 'DESC')
                 ->first();
@@ -198,7 +192,6 @@ class BoardController extends ApiController
 
             return $this->sendResponse(['Code for joining the board has been sent to the user email.']);
         } catch (Exception $exception) {
-            error_log($exception);
             return $this->sendError('Something went wrong, please contact administrator!', [], Response::HTTP_INTERNAL_SERVER_ERROR);
         }
     }
@@ -206,37 +199,26 @@ class BoardController extends ApiController
     {
         try {
             $validate = Validator::make($request->all(), [
-                'email' => 'required|email',
                 'code' => 'required'
             ]);
 
             if ($validate->fails()) {
                 return $this->sendError($validate->messages()->toArray());
             }
+            $authUser = Auth::user();
             $checkUser = BoardInvites::where("code", $request->get("code"))->first();
             if (!$checkUser) {
                 return $this->sendError("Invalid code", []);
             }
-            $isUser = User::where("email", $request->get("email"))->first();
-            if ($isUser) {
-                if ($isUser->email !== $checkUser->email) {
-                    return $this->sendError("Not allowed to use this code", [], Response::HTTP_NOT_ACCEPTABLE);
-                }
 
-                $boardMember = new BoardMembers();
-                $boardMember->board_id = $checkUser->board_id;
-                $boardMember->user_id = $isUser->id;
-                $boardMember->save();
-            } else {
-                if ($checkUser->email !== $request->get("email")) {
-                    return $this->sendError("Not allowed to use this code", [], Response::HTTP_NOT_ACCEPTABLE);
-                }
-                $guestUser = new BoardGuestsUsers();
-                $guestUser->board_id = $checkUser->board_id;
-                $guestUser->email = $request->get("email");
-                $guestUser->save();
+            if ($authUser->email !== $checkUser->email) {
+                return $this->sendError("Not allowed to use this code", [], Response::HTTP_NOT_ACCEPTABLE);
             }
 
+            $boardMember = new BoardMembers();
+            $boardMember->board_id = $checkUser->board_id;
+            $boardMember->user_id = $authUser->id;
+            $boardMember->save();
             $checkUser->delete();
 
             return $this->sendResponse(["You successfully joined the board!"]);

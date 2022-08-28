@@ -24,30 +24,29 @@ Route::post("/register", [UserController::class, "register"]);
 Route::post("/login", [UserController::class, "login"]);
 Route::post("/verify-email", [UserController::class, "verifyEmail"]);
 
-Route::post("/accept-board-invite", [BoardController::class, "acceptInvite"]); // can be used by guests & users
-
 Route::middleware(['auth:sanctum'])->group(function () {
-    Route::get("/user", [UserController::class, "getUser"]);
-    Route::get("/get-user-boards", [UserController::class, "getUserBoards"]);
+  Route::get("/user", [UserController::class, "getUser"]);
+  Route::get("/get-user-boards", [UserController::class, "getUserBoards"]);
 
-    Route::post("/create-board", [BoardController::class, "add"]);
-    Route::put("/update-board/{id}", [BoardController::class, "update"]);
-    Route::post("/send-invite", [BoardController::class, "sendInvite"]);
-    Route::delete("/delete-board/{id}", [BoardController::class, "delete"]);
-    Route::put("/archive-board/{id}", [BoardController::class, "archive"]);
+  Route::post("/create-board", [BoardController::class, "add"]);
+  Route::post("/accept-board-invite", [BoardController::class, "acceptInvite"]);
+  Route::post("/send-invite", [BoardController::class, "sendInvite"]);
+  Route::put("/update-board/{id}", [BoardController::class, "update"]);
+  Route::put("/archive-board/{id}", [BoardController::class, "archive"]);
+  Route::delete("/delete-board/{id}", [BoardController::class, "delete"]);
 
-    Route::post("/create-status", [StatusController::class, "add"]);
-    Route::get("/get-statuses/{id}", [StatusController::class, "getAllStatusesForBoard"]);
-    Route::get("/get-status/{id}", [StatusController::class, "get"]);
-    Route::put("/update-status/{id}", [StatusController::class, "update"]);
-    Route::delete("/delete-status/{id}", [StatusController::class, "delete"]);
+  Route::get("/get-statuses/{id}", [StatusController::class, "getAllStatusesForBoard"]);
+  //Route::get("/get-status/{id}", [StatusController::class, "get"]);
+  Route::post("/create-status", [StatusController::class, "add"]);
+  Route::put("/update-status/{id}", [StatusController::class, "update"]);
+  Route::delete("/delete-status/{id}", [StatusController::class, "delete"]);
 
-    Route::post("/create-task", [TaskController::class, "add"]);
-    Route::get("/get-tasks/{id}", [TaskController::class, "getAllTasksForStatus"]);
-    Route::get("/get-task/{id}", [TaskController::class, "get"]);
-    Route::put("/update-task/{id}", [TaskController::class, "update"]);
-    Route::delete("/delete-task/{id}", [TaskController::class, "delete"]);
-    Route::put("/archive-task/{id}", [TaskController::class, "archive"]);
+  Route::post("/create-task", [TaskController::class, "add"]);
+  Route::delete("/delete-task/{id}", [TaskController::class, "delete"]);
+  Route::get("/get-tasks/{id}", [TaskController::class, "getAllTasksForStatus"]);
+  //  Route::get("/get-task/{id}", [TaskController::class, "get"]);
+  Route::put("/update-task/{id}", [TaskController::class, "update"]);
+  Route::put("/archive-task/{id}", [TaskController::class, "archive"]);
 
-    Route::put("/change-task-status/{id}", [TaskAssignedToController::class, "changeTaskStatus"]);
+  Route::put("/change-task-status/{id}", [TaskAssignedToController::class, "changeTaskStatus"]);
 });

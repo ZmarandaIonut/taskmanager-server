@@ -19,7 +19,7 @@ return new class extends Migration
             $table->bigInteger("board_id")->unsigned();
             $table->bigInteger("user_id")->unsigned();
             $table->foreign("board_id")->references("id")->on("boards")->onDelete("cascade");
-            $table->string("role")->default(BoardMembers::MEMBER);
+            $table->string("role")->default("Member");
             $table->timestamps();
         });
     }
