@@ -10,4 +10,8 @@ class BoardMembers extends Model
     use HasFactory;
     const ADMIN = 1;
     const MEMBER = 0;
+
+    protected $hidden = [
+        'created_at', 'updated_at', 'id'
+    ];
 }
