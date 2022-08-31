@@ -49,6 +49,7 @@ class BoardController extends ApiController
             $boardMember->board_id = $board->id;
             $boardMember->user_id = $board->owner_id;
             $boardMember->role = "Admin";
+            $boardMember->isBoardOwner = 1;
 
             $boardMember->save();
 
@@ -222,6 +223,27 @@ class BoardController extends ApiController
             $checkUser->delete();
 
             return $this->sendResponse(["You successfully joined the board!"]);
+        } catch (Exception $exception) {
+            return $this->sendError('Something went wrong, please contact administrator!', [], Response::HTTP_INTERNAL_SERVER_ERROR);
+        }
+    }
+    public function getBoardsWhereUserIsMember()
+    {
+        try {
+            $authUser = Auth::user();
+            $getUsers = BoardMembers::query();
+            $getUser = $getUsers->where("user_id", $authUser->id)->where("isBoardOwner", 0)->paginate(10);
+            $result = [
+                "boards" => [],
+                "currentPage" => $getUser->currentPage(),
+                "hasMorePages" => $getUser->hasMorePages(),
+                "lastPage" => $getUser->lastPage()
+            ];
+            foreach ($getUser->items() as $userBoardMember) {
+                $board = $userBoardMember->getBoards;
+                $result["boards"][] = $board;
+            }
+            return $this->sendResponse($result);
         } catch (Exception $exception) {
             return $this->sendError('Something went wrong, please contact administrator!', [], Response::HTTP_INTERNAL_SERVER_ERROR);
         }

@@ -153,8 +153,15 @@ class UserController extends ApiController
     {
         try {
             $user = Auth::user();
-            $userBoards = $user->getBoards;
-            return $this->sendResponse($userBoards);
+            $boards = Board::query();
+            $getBoards = $boards->where("owner_id", $user->id)->paginate(10);
+            $result = [
+                "boards" => $getBoards->items(),
+                "currentPage" => $getBoards->currentPage(),
+                "hasMorePages" => $getBoards->hasMorePages(),
+                "lastPage" => $getBoards->lastPage()
+            ];
+            return $this->sendResponse($result);
         } catch (Exception $exception) {
             error_log($exception);
             return $this->sendError('Something went wrong, please contact administrator!', [], Response::HTTP_INTERNAL_SERVER_ERROR);
