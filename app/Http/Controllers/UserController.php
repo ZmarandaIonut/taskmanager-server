@@ -3,9 +3,11 @@
 namespace App\Http\Controllers;
 
 use App\Models\Board;
+use App\Models\BoardMembers;
 use Illuminate\Http\Request;
 use Illuminate\Support\Facades\Validator;
 use Illuminate\Support\Facades\Hash;
+use Illuminate\Support\Facades\Log;
 use App\Models\User;
 use App\Notifications\VerifyEmail;
 use Exception;
@@ -162,8 +164,10 @@ class UserController extends ApiController
                 "lastPage" => $getBoards->lastPage()
             ];
             return $this->sendResponse($result);
+            $boards = BoardMembers::where('user_id', $user->id)->get();
+            return $this->sendResponse($boards);
         } catch (Exception $exception) {
-            error_log($exception);
+            Log::error($exception);
             return $this->sendError('Something went wrong, please contact administrator!', [], Response::HTTP_INTERNAL_SERVER_ERROR);
         }
     }

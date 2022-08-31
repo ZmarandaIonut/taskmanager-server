@@ -23,6 +23,7 @@ use Illuminate\Support\Facades\Auth;
 Route::post("/register", [UserController::class, "register"]);
 Route::post("/login", [UserController::class, "login"]);
 Route::post("/verify-email", [UserController::class, "verifyEmail"]);
+Route::post("/resend-verify-email", [UserController::class, "resendVerifyEmailCode"]);
 
 Route::middleware(['auth:sanctum'])->group(function () {
   Route::get("/user", [UserController::class, "getUser"]);
