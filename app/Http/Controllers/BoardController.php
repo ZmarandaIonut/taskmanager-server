@@ -248,4 +248,36 @@ class BoardController extends ApiController
             return $this->sendError('Something went wrong, please contact administrator!', [], Response::HTTP_INTERNAL_SERVER_ERROR);
         }
     }
+
+    public function getBoard($slug)
+    {
+        try {
+            $board = Board::where("slug", $slug)->first();
+            if (!$board) {
+                return $this->sendError("Board not found", [], Response::HTTP_NOT_FOUND);
+            }
+            $authUser = Auth::user();
+
+            $getUserAsBoardMember = BoardMembers::where("board_id", $board->id)->where("user_id", $authUser->id)->first();
+
+            if (!$getUserAsBoardMember) {
+                return $this->sendError("Not allowed to visit this board", [], Response::HTTP_FORBIDDEN);
+            }
+
+            $boardStatuses = $board->statuses;
+            $boardContent = [];
+            for ($i = 0; $i < count($boardStatuses); $i++) {
+                $boardContent[] = $boardStatuses[$i]->toArray();
+                $boardContent[$i]["tasks"] = $boardStatuses[$i]->tasks;
+            }
+            $result = [
+                "statuses" => $boardContent,
+                "userRole" => $getUserAsBoardMember->role,
+                "isBoardOwner" => $getUserAsBoardMember->isBoardOwner
+            ];
+            return $this->sendResponse($result);
+        } catch (Exception $exception) {
+            return $this->sendError('Something went wrong, please contact administrator!', [], Response::HTTP_INTERNAL_SERVER_ERROR);
+        }
+    }
 }
