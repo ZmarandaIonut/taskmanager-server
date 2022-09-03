@@ -17,7 +17,10 @@ class BoardMembers extends Model
     {
         return $this->belongsTo(Board::class, "board_id", "id");
     }
-
+    public function getUser()
+    {
+        return $this->belongsTo(User::class, "user_id", "id");
+    }
     protected $hidden = [
         'created_at', 'updated_at', 'id'
     ];

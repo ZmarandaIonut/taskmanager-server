@@ -300,14 +300,21 @@ class BoardController extends ApiController
             $members = BoardMembers::query();
 
             $boardMembers = $members->where("board_id", $board->id)->paginate(30);
-            $result = [
-                "members" => $boardMembers->items(),
+
+            $result = [];
+
+            foreach ($boardMembers->items() as $idx => $member) {
+                $result[] = $member->toArray();
+                $result[$idx]["name"] = $member->getUser["name"];
+            }
+            $data = [
+                "members" => $result,
                 "currentPage" => $boardMembers->currentPage(),
                 "hasMorePages" => $boardMembers->hasMorePages(),
                 "lastPage" => $boardMembers->lastPage(),
                 "totalMembers" => $boardMembers->total()
             ];
-            return $this->sendResponse($result);
+            return $this->sendResponse($data);
         } catch (Exception $exception) {
             return $this->sendError('Something went wrong, please contact administrator!', [], Response::HTTP_INTERNAL_SERVER_ERROR);
         }
