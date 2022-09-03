@@ -37,6 +37,7 @@ Route::middleware(['auth:sanctum'])->group(function () {
   Route::delete("/delete-board/{id}", [BoardController::class, "delete"]);
   Route::get("/get-joined-boards", [BoardController::class, "getBoardsWhereUserIsMember"]);
   Route::get("/board/{slug}", [BoardController::class, "getBoard"]);
+  Route::get("/get-board-members/{slug}", [BoardController::class, "getBoardMembers"]);
 
   Route::get("/get-statuses/{id}", [StatusController::class, "getAllStatusesForBoard"]);
   //Route::get("/get-status/{id}", [StatusController::class, "get"]);
