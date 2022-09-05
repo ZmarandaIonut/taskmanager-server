@@ -38,6 +38,7 @@ Route::middleware(['auth:sanctum'])->group(function () {
   Route::get("/get-joined-boards", [BoardController::class, "getBoardsWhereUserIsMember"]);
   Route::get("/board/{slug}", [BoardController::class, "getBoard"]);
   Route::get("/get-board-members/{slug}", [BoardController::class, "getBoardMembers"]);
+  Route::put("/change-boardmember-role", [BoardController::class, "changeBoardMemberRole"]);
 
   Route::get("/get-statuses/{id}", [StatusController::class, "getAllStatusesForBoard"]);
   //Route::get("/get-status/{id}", [StatusController::class, "get"]);

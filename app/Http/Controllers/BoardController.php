@@ -271,6 +271,7 @@ class BoardController extends ApiController
                 $boardContent[$i]["tasks"] = $boardStatuses[$i]->tasks;
             }
             $result = [
+                "board_id" => $board->id,
                 "statuses" => $boardContent,
                 "userRole" => $getUserAsBoardMember->role,
                 "isBoardOwner" => $getUserAsBoardMember->isBoardOwner
@@ -305,7 +306,7 @@ class BoardController extends ApiController
 
             foreach ($boardMembers->items() as $idx => $member) {
                 $result[] = $member->toArray();
-                $result[$idx]["name"] = $member->getUser["name"];
+                $result[$idx]["email"] = $member->getUser["email"];
             }
             $data = [
                 "members" => $result,
@@ -315,6 +316,57 @@ class BoardController extends ApiController
                 "totalMembers" => $boardMembers->total()
             ];
             return $this->sendResponse($data);
+        } catch (Exception $exception) {
+            return $this->sendError('Something went wrong, please contact administrator!', [], Response::HTTP_INTERNAL_SERVER_ERROR);
+        }
+    }
+
+    public function changeBoardMemberRole(Request $request)
+    {
+        try {
+            $validate = Validator::make($request->all(), [
+                "board_id" => "required|exists:boards,id",
+                "user_id" => "required|exists:users,id",
+                "role" => "required"
+            ]);
+
+            if ($validate->fails()) {
+                return $this->sendError($validate->messages()->toArray());
+            }
+
+            $userRole = $request->get("role");
+
+            if ($userRole !== "Member" && $userRole !== "Admin") {
+                return $this->sendError("Invalid role", []);
+            }
+
+            $authUser = Auth::user();
+            $checkAuthUserRole = BoardMembers::where("board_id", $request->get("board_id"))->where("user_id", $authUser->id)->first();
+
+            if (!$checkAuthUserRole || $checkAuthUserRole->role !== "Admin") {
+                return $this->sendError("Not allowed to perform this action", [], Response::HTTP_METHOD_NOT_ALLOWED);
+            }
+
+            $checkForUser = BoardMembers::where("board_id", $request->get("board_id"))->where("user_id", $request->get("user_id"))->first();
+
+            if (!$checkForUser) {
+                return $this->sendError("This user is not a member of this board", [], Response::HTTP_NOT_FOUND);
+            }
+
+            if (!$checkAuthUserRole->isBoardOwner && $checkForUser->isBoardOwner) {
+                return $this->sendError("You cannot chage the role of a board owner", [], Response::HTTP_METHOD_NOT_ALLOWED);
+            }
+
+            if ($checkAuthUserRole->user_id === $checkForUser->user_id) {
+                return $this->sendError("You cannot change your role by yourself", []);
+            }
+            if ($checkForUser->role === $userRole) {
+                return $this->sendError("User already have this role", []);
+            }
+
+            $checkForUser->role = $request->get("role");
+            $checkForUser->save();
+            return $this->sendResponse(["User role modified"]);
         } catch (Exception $exception) {
             return $this->sendError('Something went wrong, please contact administrator!', [], Response::HTTP_INTERNAL_SERVER_ERROR);
         }
