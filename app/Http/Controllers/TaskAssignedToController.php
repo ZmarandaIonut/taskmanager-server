@@ -3,6 +3,7 @@
 namespace App\Http\Controllers;
 
 use App\Models\BoardMembers;
+use App\Models\Task;
 use App\Models\TaskAssignedTo;
 use App\Models\User;
 use Exception;
@@ -46,6 +47,41 @@ class TaskAssignedToController extends ApiController
             $assignUser->save();
 
             return $this->sendResponse([], 201);
+        } catch (Exception $exception) {
+            error_log($exception);
+            return $this->sendError('Something went wrong, please contact administrator!', [], Response::HTTP_INTERNAL_SERVER_ERROR);
+        }
+    }
+
+    public function getAssignedUsers($id)
+    {
+        try {
+            $authUser = Auth::user();
+
+            $task = Task::find($id);
+            if (!$task) {
+                return $this->sendError("Task not found", [], Response::HTTP_NOT_FOUND);
+            }
+            $status = $task->status;
+            $taskBelongsToBoardID = $status->board_id;
+
+            $isUserBoardMember = BoardMembers::where("user_id", $authUser->id)->where("board_id", $taskBelongsToBoardID)->first();
+            if (!$isUserBoardMember) {
+                return $this->sendError("Not allowed to perform this action", [], Response::HTTP_METHOD_NOT_ALLOWED);
+            }
+            $assignedUsers = TaskAssignedTo::query()->where("task_id", $id)->paginate(30);
+            $result = [
+                "users" => [],
+                "currentPage" => $assignedUsers->currentPage(),
+                "hasMorePages" => $assignedUsers->hasMorePages(),
+                "lastPage" => $assignedUsers->lastPage()
+            ];
+
+            foreach ($assignedUsers->items() as $assigned) {
+                $assignedUser = $assigned->getUser;
+                $result["users"][] = $assignedUser;
+            }
+            return $this->sendResponse($result);
         } catch (Exception $exception) {
             error_log($exception);
             return $this->sendError('Something went wrong, please contact administrator!', [], Response::HTTP_INTERNAL_SERVER_ERROR);
