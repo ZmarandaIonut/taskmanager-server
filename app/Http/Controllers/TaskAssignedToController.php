@@ -42,7 +42,7 @@ class TaskAssignedToController extends ApiController
 
             $assignUser = new TaskAssignedTo();
             $assignUser->task_id = $request->get("task_id");
-            $assignUser->assigned_to = 1;
+            $assignUser->assigned_to = $userID;
             $assignUser->save();
 
             return $this->sendResponse([], 201);
