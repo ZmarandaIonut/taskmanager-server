@@ -156,7 +156,28 @@ class UserController extends ApiController
         try {
             $user = Auth::user();
             $boards = Board::query();
-            $getBoards = $boards->where("owner_id", $user->id)->paginate(10);
+            $getBoards = $boards->where([["owner_id", $user->id], ["isArchived", false]])->paginate(10);
+            $result = [
+                "boards" => $getBoards->items(),
+                "currentPage" => $getBoards->currentPage(),
+                "hasMorePages" => $getBoards->hasMorePages(),
+                "lastPage" => $getBoards->lastPage()
+            ];
+            return $this->sendResponse($result);
+            $boards = BoardMembers::where('user_id', $user->id)->get();
+            return $this->sendResponse($boards);
+        } catch (Exception $exception) {
+            Log::error($exception);
+            return $this->sendError('Something went wrong, please contact administrator!', [], Response::HTTP_INTERNAL_SERVER_ERROR);
+        }
+    }
+
+    public function getUserArchivedBoards()
+    {
+        try {
+            $user = Auth::user();
+            $boards = Board::query();
+            $getBoards = $boards->where([["owner_id", $user->id], ["isArchived", true]])->paginate(10);
             $result = [
                 "boards" => $getBoards->items(),
                 "currentPage" => $getBoards->currentPage(),

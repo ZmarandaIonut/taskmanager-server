@@ -241,7 +241,9 @@ class BoardController extends ApiController
             ];
             foreach ($getUser->items() as $userBoardMember) {
                 $board = $userBoardMember->getBoards;
-                $result["boards"][] = $board;
+                if(!$board->isArchived){
+                    $result["boards"][] = $board;
+                }
             }
             return $this->sendResponse($result);
         } catch (Exception $exception) {
