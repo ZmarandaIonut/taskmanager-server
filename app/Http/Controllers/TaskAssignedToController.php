@@ -3,38 +3,51 @@
 namespace App\Http\Controllers;
 
 use App\Models\BoardMembers;
-use App\Models\Task;
 use App\Models\TaskAssignedTo;
-use Illuminate\Http\Response;
-use Illuminate\Support\Facades\Log;
-use Illuminate\Support\Facades\Auth;
+use App\Models\User;
 use Exception;
+use Illuminate\Http\Request;
+use Illuminate\Http\Response;
+use Illuminate\Support\Facades\Auth;
+use Illuminate\Support\Facades\Validator;
 
 class TaskAssignedToController extends ApiController
 {
-    public function changeTaskStatus($id)
+    public function assignTaskToUser(Request $request)
     {
         try {
-            $task = Task::find($id);
-            $taskAssignedTo = TaskAssignedTo::where('task_id', $task->id)->first();
-            $user = Auth::user();
-
-            $foundUser = BoardMembers::where("board_id", $task->status->board->id)->where("user_id", $user->id)->first();
-
-            if (!$foundUser) {
-                return $this->sendError("Not allowed to update this task", [], Response::HTTP_METHOD_NOT_ALLOWED);
+            $validator = Validator::make($request->all(), [
+                "task_id" => "required|exists:tasks,id",
+                "board_id" => "required",
+                "email" => "required|exists:users,email"
+            ]);
+            if ($validator->fails()) {
+                return $this->sendError($validator->messages()->toArray());
             }
-            if (!$task) {
-                return $this->sendError('task not found!', [], Response::HTTP_NOT_FOUND);
+            $user = User::where("email", $request->get("email"))->first();
+            $userID = $user->id;
+            $authUser = Auth::user();
+            $isAuthUserBoardMember = BoardMembers::where("user_id", $authUser->id)->where("board_id", $request->get("board_id"))->first();
+            if (!$isAuthUserBoardMember) {
+                return $this->sendError("Not allowed to perform this action", [], Response::HTTP_METHOD_NOT_ALLOWED);
+            }
+            $isUserBoardMember = BoardMembers::where("user_id", $userID)->where("board_id", $request->get("board_id"))->first();
+            if (!$isUserBoardMember) {
+                return $this->sendError("This user is not a board member", []);
+            }
+            $isUserAlreadyAsigned = TaskAssignedTo::where("task_id", $request->get("task_id"))->where("assigned_to", $userID)->first();
+            if ($isUserAlreadyAsigned) {
+                return $this->sendError("This user is already assigned", []);
             }
 
-            $taskAssignedTo->isActive = $taskAssignedTo->isActive ? TaskAssignedTo::INACTIVE : TaskAssignedTo::ACTIVE;
-            $taskAssignedTo->save();
+            $assignUser = new TaskAssignedTo();
+            $assignUser->task_id = $request->get("task_id");
+            $assignUser->assigned_to = 1;
+            $assignUser->save();
 
-            return $this->sendResponse($taskAssignedTo->toArray());
+            return $this->sendResponse([], 201);
         } catch (Exception $exception) {
-            Log::error($exception);
-
+            error_log($exception);
             return $this->sendError('Something went wrong, please contact administrator!', [], Response::HTTP_INTERNAL_SERVER_ERROR);
         }
     }

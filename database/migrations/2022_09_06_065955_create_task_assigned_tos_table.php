@@ -1,6 +1,5 @@
 <?php
 
-use App\Models\TaskAssignedTo;
 use Illuminate\Database\Migrations\Migration;
 use Illuminate\Database\Schema\Blueprint;
 use Illuminate\Support\Facades\Schema;
@@ -19,7 +18,6 @@ return new class extends Migration
             $table->bigInteger("task_id")->unsigned();
             $table->foreign("task_id")->references("id")->on("tasks")->onDelete("cascade");
             $table->bigInteger("assigned_to")->unsigned();
-            $table->tinyInteger("isActive")->default(TaskAssignedTo::ACTIVE);
             $table->timestamps();
         });
     }

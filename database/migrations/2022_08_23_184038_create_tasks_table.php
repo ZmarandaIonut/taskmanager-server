@@ -19,6 +19,7 @@ return new class extends Migration
             $table->bigInteger("status_id")->unsigned();
             $table->foreign("status_id")->references("id")->on("statuses")->onDelete("cascade");
             $table->boolean("isArchived")->default(false);
+            $table->boolean("isActive")->default(1);
             $table->timestamps();
         });
     }

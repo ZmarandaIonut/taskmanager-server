@@ -342,7 +342,7 @@ class BoardController extends ApiController
 
             $authUser = Auth::user();
             $checkAuthUserRole = BoardMembers::where("board_id", $request->get("board_id"))->where("user_id", $authUser->id)->first();
-
+            error_log($checkAuthUserRole);
             if (!$checkAuthUserRole || $checkAuthUserRole->role !== "Admin") {
                 return $this->sendError("Not allowed to perform this action", [], Response::HTTP_METHOD_NOT_ALLOWED);
             }
