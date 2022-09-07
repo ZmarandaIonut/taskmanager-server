@@ -69,12 +69,14 @@ class TaskAssignedToController extends ApiController
             if (!$isUserBoardMember) {
                 return $this->sendError("Not allowed to perform this action", [], Response::HTTP_METHOD_NOT_ALLOWED);
             }
+            $isCurrentUserAssigned = TaskAssignedTo::where("assigned_to", $authUser->id)->where("task_id", $id)->first();
             $assignedUsers = TaskAssignedTo::query()->where("task_id", $id)->paginate(30);
             $result = [
                 "users" => [],
                 "currentPage" => $assignedUsers->currentPage(),
                 "hasMorePages" => $assignedUsers->hasMorePages(),
-                "lastPage" => $assignedUsers->lastPage()
+                "lastPage" => $assignedUsers->lastPage(),
+                "isCurrentUserAssigned" => $isCurrentUserAssigned ? true : false
             ];
 
             foreach ($assignedUsers->items() as $assigned) {
