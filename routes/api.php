@@ -28,6 +28,7 @@ Route::post("/resend-verify-email", [UserController::class, "resendVerifyEmailCo
 Route::middleware(['auth:sanctum'])->group(function () {
   Route::get("/user", [UserController::class, "getUser"]);
   Route::get("/get-user-boards", [UserController::class, "getUserBoards"]);
+  Route::get("/get-user-archived-boards", [UserController::class, "getUserArchivedBoards"]);
 
   Route::post("/create-board", [BoardController::class, "add"]);
   Route::post("/accept-board-invite", [BoardController::class, "acceptInvite"]);
