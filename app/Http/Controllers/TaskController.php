@@ -5,11 +5,13 @@ namespace App\Http\Controllers;
 use App\Models\BoardMembers;
 use App\Models\Status;
 use App\Models\Task;
+use App\Models\TaskAssignedTo;
 use Illuminate\Http\Request;
 use Illuminate\Support\Facades\Validator;
 use Illuminate\Http\Response;
 use Illuminate\Support\Facades\Log;
 use Exception;
+use Illuminate\Auth\Events\Validated;
 use Illuminate\Support\Facades\Auth;
 use Illuminate\Support\Facades\DB;
 
@@ -181,6 +183,43 @@ class TaskController extends ApiController
         } catch (Exception $exception) {
             Log::error($exception);
 
+            return $this->sendError('Something went wrong, please contact administrator!', [], Response::HTTP_INTERNAL_SERVER_ERROR);
+        }
+    }
+
+    public function changeTaskStatus(Request $request)
+    {
+        try {
+            $validator = Validator::make($request->all(), [
+                "board_id" => "required",
+                "task_id" => "required|exists:tasks,id",
+                "status" => "required|boolean"
+            ]);
+
+            if ($validator->fails()) {
+                return $this->sendError($validator->messages()->toArray());
+            }
+
+            $authUser = Auth::user();
+
+            $isUserAssignedToTask = TaskAssignedTo::where("assigned_to", $authUser->id)->where("task_id", $request->get("task_id"))->first();
+            $getUserRole = BoardMembers::where("user_id", $authUser->id)->where("board_id", $request->get("board_id"))->first();
+
+            if (!$getUserRole) {
+                return $this->sendError("Not allowed to perform this action", [], Response::HTTP_METHOD_NOT_ALLOWED);
+            }
+
+            if (!$isUserAssignedToTask && $getUserRole->role !== "Admin") {
+                return $this->sendError("Not allowed to perform this action", [], Response::HTTP_METHOD_NOT_ALLOWED);
+            }
+
+            $task = Task::find($request->get("task_id"));
+            $task->isActive = $request->get("status");
+            $task->save();
+            return $this->sendResponse($task);
+        } catch (Exception $exception) {
+            Log::error($exception);
+            error_log($exception);
             return $this->sendError('Something went wrong, please contact administrator!', [], Response::HTTP_INTERNAL_SERVER_ERROR);
         }
     }

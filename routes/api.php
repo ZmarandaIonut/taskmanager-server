@@ -52,6 +52,7 @@ Route::middleware(['auth:sanctum'])->group(function () {
   //  Route::get("/get-task/{id}", [TaskController::class, "get"]);
   Route::put("/update-task/{id}", [TaskController::class, "update"]);
   Route::put("/archive-task/{id}", [TaskController::class, "archive"]);
+  Route::post("/change-task-status", [TaskController::class, "changeTaskStatus"]);
 
   Route::get("/get-task-assigned-users/{id}", [TaskAssignedToController::class, "getAssignedUsers"]);
   Route::post("/assign-task-to-user", [TaskAssignedToController::class, "assignTaskToUser"]);
