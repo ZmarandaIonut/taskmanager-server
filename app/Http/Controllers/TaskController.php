@@ -2,6 +2,7 @@
 
 namespace App\Http\Controllers;
 
+use App\Models\ArchivedTasks;
 use App\Models\BoardMembers;
 use App\Models\Status;
 use App\Models\Task;
@@ -176,8 +177,20 @@ class TaskController extends ApiController
                 return $this->sendError('task not found!', [], Response::HTTP_NOT_FOUND);
             }
 
+            if (!$task->isArchived) {
+                $archiveTask = new ArchivedTasks();
+                $archiveTask->task_id = $task->id;
+                $archiveTask->archived_by = $user->id;
+                $archiveTask->save();
+            }
+            if ($task->isArchived) {
+                $archiveTask = ArchivedTasks::where("task_id", $task->id)->first();
+                $archiveTask->delete();
+            }
+
             $task->isArchived = $task->isArchived ? false : true;
             $task->save();
+
 
             return $this->sendResponse($task->toArray());
         } catch (Exception $exception) {

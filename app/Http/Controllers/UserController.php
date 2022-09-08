@@ -2,6 +2,7 @@
 
 namespace App\Http\Controllers;
 
+use App\Models\ArchivedTasks;
 use App\Models\Board;
 use App\Models\BoardMembers;
 use Illuminate\Http\Request;
@@ -187,6 +188,29 @@ class UserController extends ApiController
             return $this->sendResponse($result);
             $boards = BoardMembers::where('user_id', $user->id)->get();
             return $this->sendResponse($boards);
+        } catch (Exception $exception) {
+            Log::error($exception);
+            return $this->sendError('Something went wrong, please contact administrator!', [], Response::HTTP_INTERNAL_SERVER_ERROR);
+        }
+    }
+
+    public function getUserArchivedTasks()
+    {
+        try {
+            $authUser = Auth::user();
+            $archivedTasks = ArchivedTasks::query();
+            $getArchivedTaskForUser = $archivedTasks->where("archived_by", $authUser->id)->paginate(10);
+            $result = [
+                "tasks" => [],
+                "currentPage" => $getArchivedTaskForUser->currentPage(),
+                "hasMorePages" => $getArchivedTaskForUser->hasMorePages(),
+                "lastPage" => $getArchivedTaskForUser->lastPage()
+            ];
+            foreach ($getArchivedTaskForUser->items() as $archivedTask) {
+                $task = $archivedTask->getTask;
+                $result["tasks"][] = $task;
+            }
+            return $this->sendResponse($result);
         } catch (Exception $exception) {
             Log::error($exception);
             return $this->sendError('Something went wrong, please contact administrator!', [], Response::HTTP_INTERNAL_SERVER_ERROR);
