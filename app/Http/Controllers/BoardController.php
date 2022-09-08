@@ -124,14 +124,14 @@ class BoardController extends ApiController
             $board = Board::find($id);
             $user = Auth::user();
 
+            if (!$board) {
+                return $this->sendError('Board not found!', [], Response::HTTP_NOT_FOUND);
+            }
+
             $foundUser = BoardMembers::where("board_id", $id)->where("user_id", $user->id)->first();
 
             if (!$foundUser || ($user->id !== $board->owner_id)) {
                 return $this->sendError("Not allowed to perform this action", [], Response::HTTP_METHOD_NOT_ALLOWED);
-            }
-
-            if (!$board) {
-                return $this->sendError('Board not found!', [], Response::HTTP_NOT_FOUND);
             }
 
             $board->isArchived = $board->isArchived ? false : true;
@@ -241,7 +241,7 @@ class BoardController extends ApiController
             ];
             foreach ($getUser->items() as $userBoardMember) {
                 $board = $userBoardMember->getBoards;
-                if(!$board->isArchived){
+                if (!$board->isArchived) {
                     $result["boards"][] = $board;
                 }
             }
@@ -262,7 +262,7 @@ class BoardController extends ApiController
 
             $getUserAsBoardMember = BoardMembers::where("board_id", $board->id)->where("user_id", $authUser->id)->first();
 
-            if (!$getUserAsBoardMember) {
+            if (!$getUserAsBoardMember || ($board->isArchived && !$getUserAsBoardMember->isBoardOwner)) {
                 return $this->sendError("Not allowed to visit this board", [], Response::HTTP_FORBIDDEN);
             }
 
@@ -274,6 +274,7 @@ class BoardController extends ApiController
             }
             $result = [
                 "board_id" => $board->id,
+                "isArchived" => $board->isArchived,
                 "statuses" => $boardContent,
                 "userRole" => $getUserAsBoardMember->role,
                 "isBoardOwner" => $getUserAsBoardMember->isBoardOwner
