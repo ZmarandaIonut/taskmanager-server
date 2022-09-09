@@ -262,10 +262,11 @@ class BoardController extends ApiController
 
             $getUserAsBoardMember = BoardMembers::where("board_id", $board->id)->where("user_id", $authUser->id)->first();
 
-            if (!$getUserAsBoardMember || ($board->isArchived && !$getUserAsBoardMember->isBoardOwner)) {
-                return $this->sendError("Not allowed to visit this board", [], Response::HTTP_FORBIDDEN);
+            if (!$authUser->isSuperAdmin) {
+                if (!$getUserAsBoardMember || ($board->isArchived && !$getUserAsBoardMember->isBoardOwner)) {
+                    return $this->sendError("Not allowed to visit this board", [], Response::HTTP_FORBIDDEN);
+                }
             }
-
             $boardStatuses = $board->statuses;
             $boardContent = [];
             for ($i = 0; $i < count($boardStatuses); $i++) {
@@ -276,9 +277,14 @@ class BoardController extends ApiController
                 "board_id" => $board->id,
                 "isArchived" => $board->isArchived,
                 "statuses" => $boardContent,
-                "userRole" => $getUserAsBoardMember->role,
-                "isBoardOwner" => $getUserAsBoardMember->isBoardOwner
             ];
+            if ($authUser->isSuperAdmin && !$getUserAsBoardMember?->isBoardOwner) {
+                $result["userRole"] = "SuperAdmin";
+                $result["isBoardOwner"] = 0;
+            } else {
+                $result["userRole"] = $getUserAsBoardMember->role;
+                $result["isBoardOwner"] = $getUserAsBoardMember->isBoardOwner;
+            }
             return $this->sendResponse($result);
         } catch (Exception $exception) {
             return $this->sendError('Something went wrong, please contact administrator!', [], Response::HTTP_INTERNAL_SERVER_ERROR);
@@ -295,10 +301,12 @@ class BoardController extends ApiController
                 return $this->sendError("Board not found", [], Response::HTTP_NOT_FOUND);
             }
 
-            $isAuthUserMember = BoardMembers::where("board_id", $board->id)->where("user_id", $authUser->id)->first();
+            if (!$authUser->isSuperAdmin) {
+                $isAuthUserMember = BoardMembers::where("board_id", $board->id)->where("user_id", $authUser->id)->first();
 
-            if (!$isAuthUserMember) {
-                return $this->sendError("Not allowed to perform this action", [], Response::HTTP_METHOD_NOT_ALLOWED);
+                if (!$isAuthUserMember) {
+                    return $this->sendError("Not allowed to perform this action", [], Response::HTTP_METHOD_NOT_ALLOWED);
+                }
             }
 
             $members = BoardMembers::query();

@@ -24,7 +24,7 @@ class User extends Authenticatable
     ];
 
     protected $visible = [
-        'id', 'name', 'email'
+        'id', 'name', 'email', "isSuperAdmin"
     ];
 
     /**

@@ -65,9 +65,11 @@ class TaskAssignedToController extends ApiController
             $status = $task->status;
             $taskBelongsToBoardID = $status->board_id;
 
-            $isUserBoardMember = BoardMembers::where("user_id", $authUser->id)->where("board_id", $taskBelongsToBoardID)->first();
-            if (!$isUserBoardMember) {
-                return $this->sendError("Not allowed to perform this action", [], Response::HTTP_METHOD_NOT_ALLOWED);
+            if (!$authUser->isSuperAdmin) {
+                $isUserBoardMember = BoardMembers::where("user_id", $authUser->id)->where("board_id", $taskBelongsToBoardID)->first();
+                if (!$isUserBoardMember) {
+                    return $this->sendError("Not allowed to perform this action", [], Response::HTTP_METHOD_NOT_ALLOWED);
+                }
             }
             $isCurrentUserAssigned = TaskAssignedTo::where("assigned_to", $authUser->id)->where("task_id", $id)->first();
             $assignedUsers = TaskAssignedTo::query()->where("task_id", $id)->paginate(30);
