@@ -353,7 +353,6 @@ class BoardController extends ApiController
 
             $authUser = Auth::user();
             $checkAuthUserRole = BoardMembers::where("board_id", $request->get("board_id"))->where("user_id", $authUser->id)->first();
-            error_log($checkAuthUserRole);
             if (!$checkAuthUserRole || $checkAuthUserRole->role !== "Admin") {
                 return $this->sendError("Not allowed to perform this action", [], Response::HTTP_METHOD_NOT_ALLOWED);
             }
@@ -383,17 +382,16 @@ class BoardController extends ApiController
         }
     }
 
-    public function removeMemberFromBoard(Request $request)
+    public function removeMemberFromBoard($id, Request $request)
     {
         try {
             $validate = Validator::make($request->all(), [
-                "slug" => "required|exists:boards,slug",
                 "member_id" => "required"
             ]);
             if ($validate->fails()) {
                 return $this->sendError($validate->messages()->toArray());
             }
-            $board = Board::where("slug", $request->get("slug"))->first();
+            $board = Board::find($id);
             if (!$board) {
                 return $this->sendError("Board not found", [], Response::HTTP_NOT_FOUND);
             }
