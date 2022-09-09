@@ -103,7 +103,7 @@ class BoardController extends ApiController
             }
             $user = Auth::user();
 
-            if ($user->id !== $board->owner_id) {
+            if ($user->id !== $board->owner_id && !$user->isSuperAdmin) {
                 return $this->sendError("Not allowed to delete this board", [], Response::HTTP_METHOD_NOT_ALLOWED);
             }
 
