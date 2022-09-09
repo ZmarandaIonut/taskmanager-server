@@ -382,4 +382,43 @@ class BoardController extends ApiController
             return $this->sendError('Something went wrong, please contact administrator!', [], Response::HTTP_INTERNAL_SERVER_ERROR);
         }
     }
+
+    public function removeMemberFromBoard(Request $request)
+    {
+        try {
+            $validate = Validator::make($request->all(), [
+                "slug" => "required|exists:boards,slug",
+                "member_id" => "required"
+            ]);
+            if ($validate->fails()) {
+                return $this->sendError($validate->messages()->toArray());
+            }
+            $board = Board::where("slug", $request->get("slug"))->first();
+            if (!$board) {
+                return $this->sendError("Board not found", [], Response::HTTP_NOT_FOUND);
+            }
+            $authUser = Auth::user();
+            $getuser = BoardMembers::where("user_id", $authUser->id)->where("board_id", $board->id)->first();
+
+            if (!$getuser || $getuser->role !== "Admin") {
+                return $this->sendError("Not allowed to perform this action", [], Response::HTTP_METHOD_NOT_ALLOWED);
+            }
+
+            $boardMember = BoardMembers::where("user_id", $request->get("member_id"))->where("board_id", $board->id)->first();
+
+            if (!$boardMember) {
+                return $this->sendError("This user is not a board member", []);
+            }
+
+            if ($boardMember->isBoardOwner) {
+                return $this->sendError("Not allowed to remove the owner of this board", [], Response::HTTP_METHOD_NOT_ALLOWED);
+            }
+
+            $boardMember->delete();
+
+            return $this->sendResponse([]);
+        } catch (Exception $exception) {
+            return $this->sendError('Something went wrong, please contact administrator!', [], Response::HTTP_INTERNAL_SERVER_ERROR);
+        }
+    }
 }

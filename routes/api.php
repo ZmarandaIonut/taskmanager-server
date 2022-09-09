@@ -41,6 +41,7 @@ Route::middleware(['auth:sanctum'])->group(function () {
   Route::get("/board/{slug}", [BoardController::class, "getBoard"]);
   Route::get("/get-board-members/{slug}", [BoardController::class, "getBoardMembers"]);
   Route::put("/change-boardmember-role", [BoardController::class, "changeBoardMemberRole"]);
+  Route::delete("/remove-member-from-board", [BoardController::class, "removeMemberFromBoard"]);
 
   Route::get("/get-statuses/{id}", [StatusController::class, "getAllStatusesForBoard"]);
   //Route::get("/get-status/{id}", [StatusController::class, "get"]);
