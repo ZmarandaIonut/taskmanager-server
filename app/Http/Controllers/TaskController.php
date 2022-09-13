@@ -70,7 +70,6 @@ class TaskController extends ApiController
             if (!$foundUser) {
                 return $this->sendError("Not allowed to perform this action", [], Response::HTTP_METHOD_NOT_ALLOWED);
             }
-
             return $this->sendResponse($tasks->toArray());
         } catch (Exception $exception) {
             Log::error($exception);

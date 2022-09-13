@@ -271,7 +271,7 @@ class BoardController extends ApiController
             $boardContent = [];
             for ($i = 0; $i < count($boardStatuses); $i++) {
                 $boardContent[] = $boardStatuses[$i]->toArray();
-                $boardContent[$i]["tasks"] = $boardStatuses[$i]->tasks;
+                $boardContent[$i]["tasks"] = $boardStatuses[$i]->tasks->sortByDesc("isActive")->values();
             }
             $result = [
                 "board_id" => $board->id,
