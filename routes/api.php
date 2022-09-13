@@ -3,6 +3,7 @@
 use App\Http\Controllers\BoardController;
 use App\Http\Controllers\StatusController;
 use App\Http\Controllers\TaskAssignedToController;
+use App\Http\Controllers\TaskCommentController;
 use App\Http\Controllers\TaskController;
 use Illuminate\Http\Request;
 use Illuminate\Support\Facades\Route;
@@ -56,7 +57,12 @@ Route::middleware(['auth:sanctum'])->group(function () {
   Route::put("/update-task/{id}", [TaskController::class, "update"]);
   Route::put("/archive-task/{id}", [TaskController::class, "archive"]);
   Route::post("/change-task-status", [TaskController::class, "changeTaskStatus"]);
+  Route::post("/create-comment", [TaskController::class, "addComment"]);
+  Route::get("/get-comments/{id}", [TaskController::class, "getComments"]);
+  Route::delete("/delete-comment/{id}", [TaskController::class, "deleteComment"]);
 
   Route::get("/get-task-assigned-users/{id}", [TaskAssignedToController::class, "getAssignedUsers"]);
   Route::post("/assign-task-to-user", [TaskAssignedToController::class, "assignTaskToUser"]);
+
+  
 });

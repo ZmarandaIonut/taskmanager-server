@@ -22,7 +22,8 @@ class BoardMembersFactory extends Factory
         return [
             'board_id' => Board::inRandomOrder()->first()->id,
             'user_id' => User::inRandomOrder()->first()->id,
-            'role' => fake()->randomElement(["Admin", "Member"])
+            'role' => fake()->randomElement(["Admin", "Member"]),
+            'isBoardOwner' => rand(0,1)
         ];
     }
 }

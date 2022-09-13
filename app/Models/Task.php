@@ -17,4 +17,14 @@ class Task extends Model
     {
         return $this->belongsTo(Status::class, 'status_id');
     }
+
+    /**
+     * Get all of the comments for the Task
+     *
+     * @return \Illuminate\Database\Eloquent\Relations\HasMany
+     */
+    public function comments()
+    {
+        return $this->hasMany(TaskComment::class, 'id');
+    }
 }

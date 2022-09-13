@@ -20,6 +20,8 @@ class TaskFactory extends Factory
         return [
             'name' => 'Task ' . strtoupper(fake()->randomLetter()) . fake()->randomLetter() . ' ' . fake()->randomNumber(2),
             'status_id' => Status::inRandomOrder()->first()->id,
+            'isArchived' => rand(0,1),
+            'isActive' => rand(0,1)
         ];
     }
 }
