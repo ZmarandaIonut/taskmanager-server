@@ -57,9 +57,10 @@ Route::middleware(['auth:sanctum'])->group(function () {
   Route::put("/update-task/{id}", [TaskController::class, "update"]);
   Route::put("/archive-task/{id}", [TaskController::class, "archive"]);
   Route::post("/change-task-status", [TaskController::class, "changeTaskStatus"]);
-  Route::post("/create-comment", [TaskController::class, "addComment"]);
-  Route::get("/get-comments/{id}", [TaskController::class, "getComments"]);
-  Route::delete("/delete-comment/{id}", [TaskController::class, "deleteComment"]);
+
+  Route::post("/create-comment", [TaskCommentController::class, "add"]);
+  Route::get("/get-comments/{id}", [TaskCommentController::class, "get"]);
+  Route::delete("/delete-comment/{id}", [TaskCommentController::class, "delete"]);
 
   Route::get("/get-task-assigned-users/{id}", [TaskAssignedToController::class, "getAssignedUsers"]);
   Route::post("/assign-task-to-user", [TaskAssignedToController::class, "assignTaskToUser"]);
