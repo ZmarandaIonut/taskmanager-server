@@ -7,6 +7,7 @@ use App\Models\BoardMembers;
 use App\Models\Status;
 use App\Models\Task;
 use App\Models\TaskAssignedTo;
+use App\Models\TaskComment;
 use Illuminate\Http\Request;
 use Illuminate\Support\Facades\Validator;
 use Illuminate\Http\Response;
@@ -15,6 +16,8 @@ use Exception;
 use Illuminate\Auth\Events\Validated;
 use Illuminate\Support\Facades\Auth;
 use Illuminate\Support\Facades\DB;
+
+use function Psy\debug;
 
 class TaskController extends ApiController
 {
