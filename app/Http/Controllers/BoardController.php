@@ -8,6 +8,7 @@ use App\Models\BoardMembers;
 use App\Models\Boards;
 use App\Models\Task;
 use App\Models\User;
+use App\Models\UserNotifications;
 use App\Notifications\SendBoardInvite;
 use App\Notifications\VerifyEmail;
 use Carbon\Carbon;
@@ -190,6 +191,13 @@ class BoardController extends ApiController
             $boardInvites->email = $request->get("email");
             $boardInvites->code = $code;
             $boardInvites->save();
+
+            if($getInvitedUser){
+              $userNotification = new UserNotifications();
+              $userNotification->user_id = $getInvitedUser->id;
+              $userNotification->message = "{$authUser->name} has invited you to join his board, code: {$code}";
+              $userNotification->save();
+            }
 
             return $this->sendResponse(['Code for joining the board has been sent to the user email.']);
         } catch (Exception $exception) {

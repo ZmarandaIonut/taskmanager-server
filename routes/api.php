@@ -7,6 +7,7 @@ use App\Http\Controllers\TaskController;
 use Illuminate\Http\Request;
 use Illuminate\Support\Facades\Route;
 use App\Http\Controllers\UserController;
+use App\Http\Controllers\UserNotifications;
 use Illuminate\Support\Facades\Auth;
 
 /*
@@ -42,6 +43,11 @@ Route::middleware(['auth:sanctum'])->group(function () {
   Route::get("/get-board-members/{slug}", [BoardController::class, "getBoardMembers"]);
   Route::put("/change-boardmember-role", [BoardController::class, "changeBoardMemberRole"]);
   Route::delete("/remove-member-from-board/{id}", [BoardController::class, "removeMemberFromBoard"]);
+
+  Route::get("/get-user-notifications", [UserNotifications::class, "getNotifications"]);
+  Route::get("/has-user-unseen-notifications", [UserNotifications::class, "hasUserUnseenNotifications"]);
+  Route::put("/mark-notification-as-seen", [UserNotifications::class, "markNotificationAsSeen"]);
+  Route::delete("/delete-notification/{id}", [UserNotifications::class, "deleteUserNotification"]);
 
   Route::get("/get-statuses/{id}", [StatusController::class, "getAllStatusesForBoard"]);
   //Route::get("/get-status/{id}", [StatusController::class, "get"]);
