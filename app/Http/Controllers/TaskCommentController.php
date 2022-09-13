@@ -45,12 +45,19 @@ class TaskCommentController extends ApiController
     {
         try {
             $task = Task::find($task_id);
-            $comments = $task->comments;
-            if (!$comments) {
-                return $this->sendError('Comments not found!', [], Response::HTTP_NOT_FOUND);
+            if (!$task) {
+                return $this->sendError('Task not found!', [], Response::HTTP_NOT_FOUND);
             }
+            $comments = TaskComment::where('task_id', $task->id)->paginate(10);
+            $result = [
+                "comments" => $comments,
+                "currentPage" => $comments->currentPage(),
+                "hasMorePages" => $comments->hasMorePages(),
+                "lastPage" => $comments->lastPage()
+            ];
+            
 
-            return $this->sendResponse($comments->toArray());
+            return $this->sendResponse($result);
         } catch (Exception $exception) {
             Log::error($exception);
             return $this->sendError('Something went wrong, please contact administrator!', [], Response::HTTP_INTERNAL_SERVER_ERROR);
