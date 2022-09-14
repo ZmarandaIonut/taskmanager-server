@@ -51,7 +51,7 @@ class UserNotifications extends ApiController
         try{
             $authUser = Auth::user();
 
-            $checkIfUnSeenNotificationExist = ModelUserNotifications::where("user_id", $authUser->id)->where("seen", 1)->get();
+            $checkIfUnSeenNotificationExist = ModelUserNotifications::where("user_id", $authUser->id)->where("seen", 0)->get();
             $result = [
                 "data" => false
             ];

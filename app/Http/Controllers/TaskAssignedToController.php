@@ -2,14 +2,17 @@
 
 namespace App\Http\Controllers;
 
+use App\Models\Board;
 use App\Models\BoardMembers;
 use App\Models\Task;
 use App\Models\TaskAssignedTo;
 use App\Models\User;
+use App\Models\UserNotifications;
 use Exception;
 use Illuminate\Http\Request;
 use Illuminate\Http\Response;
 use Illuminate\Support\Facades\Auth;
+use Illuminate\Support\Facades\DB;
 use Illuminate\Support\Facades\Validator;
 
 class TaskAssignedToController extends ApiController
@@ -40,11 +43,18 @@ class TaskAssignedToController extends ApiController
             if ($isUserAlreadyAsigned) {
                 return $this->sendError("This user is already assigned", []);
             }
-
+            $board = Board::where("id", $request->get("board_id"))->first();
+            $task = Task::where("id", $request->get("task_id"))->first();
             $assignUser = new TaskAssignedTo();
             $assignUser->task_id = $request->get("task_id");
             $assignUser->assigned_to = $userID;
             $assignUser->save();
+
+            $userNotification = new UserNotifications();
+            $userNotification->user_id = $user->id;
+            $userNotification->message = "You have been assigned to a new task, board: {$board->name}, task: {$task->name}";
+            $userNotification->save();
+             
 
             return $this->sendResponse([], 201);
         } catch (Exception $exception) {
