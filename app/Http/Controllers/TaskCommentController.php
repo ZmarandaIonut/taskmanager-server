@@ -18,7 +18,6 @@ class TaskCommentController extends ApiController
     public function add(Request $request)
     {
         try {
-
             $validate = Validator::make($request->all(), [
                 'comment' => 'required|max:200',
                 'task_id' => 'required|exists:tasks,id',
@@ -71,7 +70,6 @@ class TaskCommentController extends ApiController
                 "hasMorePages" => $getComments->hasMorePages(),
                 "lastPage" => $getComments->lastPage()
             ];
-            
 
             return $this->sendResponse($result);
         } catch (Exception $exception) {
@@ -86,6 +84,12 @@ class TaskCommentController extends ApiController
             $comment = TaskComment::find($comment_id);
             if (!$comment) {
                 return $this->sendError('Comment not found!', [], Response::HTTP_NOT_FOUND);
+            }
+            $user = Auth::user();
+            $board = Task::find($comment->task_id)->status->board;
+
+            if (!BoardMembers::where("user_id", $user->id)->where("board_id", $board->id)->first()) {
+                return $this->sendError("Not allowed", [], Response::HTTP_UNAUTHORIZED);
             }
 
             

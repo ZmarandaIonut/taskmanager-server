@@ -28,4 +28,8 @@ class TaskComment extends Model
     {
         return $this->belongsTo(Task::class, 'id');
     }
+
+    protected $fillable = [
+        'comment',
+    ];
 }
