@@ -5,15 +5,19 @@ namespace App\Http\Controllers;
 use App\Models\ArchivedTasks;
 use App\Models\Board;
 use App\Models\BoardMembers;
+use App\Models\PasswordReset;
 use Illuminate\Http\Request;
 use Illuminate\Support\Facades\Validator;
 use Illuminate\Support\Facades\Hash;
 use Illuminate\Support\Facades\Log;
 use App\Models\User;
+use App\Notifications\ForgotPassword;
 use App\Notifications\VerifyEmail;
+use Carbon\Carbon;
 use Exception;
 use Illuminate\Http\Response;
 use Illuminate\Support\Facades\Auth;
+use Illuminate\Support\Facades\DB;
 use Illuminate\Support\Str;
 
 class UserController extends ApiController
@@ -211,6 +215,74 @@ class UserController extends ApiController
                 $result["tasks"][] = $task;
             }
             return $this->sendResponse($result);
+        } catch (Exception $exception) {
+            Log::error($exception);
+            return $this->sendError('Something went wrong, please contact administrator!', [], Response::HTTP_INTERNAL_SERVER_ERROR);
+        }
+    }
+
+    public function forgotPassword(Request $request)
+    {
+        try {
+            $validate = Validator::make($request->all(), [
+                "email" => 'required|email|exists:users,email'
+            ]);
+
+            if ($validate->fails()) {
+                return $this->sendError('Bad request!', $validate->messages()->toArray());
+            }
+
+            $user = User::where("email", $request->get("email"))->first();
+
+            $resetPassword = new PasswordReset();
+            $resetPassword->email = $user->email;
+            $resetPassword->token = Str::random(10);
+            $resetPassword->save();
+
+            $user->notify(new ForgotPassword($resetPassword->token));
+
+            return $this->sendResponse([
+                'data' => 'Code for reset password sent!'
+            ]);
+        } catch (Exception $exception) {
+            Log::error($exception);
+            return $this->sendError('Something went wrong, please contact administrator!', [], Response::HTTP_INTERNAL_SERVER_ERROR);
+        }
+    }
+
+    public function resetPassword(Request $request)
+    {
+        try {
+            $validate = Validator::make($request->all(), [
+                "email" => 'required|email|exists:users,email',
+                "token" => 'required',
+                "password" => 'required|confirmed'
+            ]);
+
+            if ($validate->fails()) {
+                return $this->sendError('Bad request!', $validate->messages()->toArray());
+            }   
+
+            $email = $request->get('email');
+            $token = $request->get('token');
+            $password = $request->get('password');
+
+            if(!PasswordReset::where('email', $email)->where('token', $token)->get()){
+                return $this->sendError('Email or token incorrect!');
+            }
+
+            $user = User::where("email", $email)->first();
+            $user->password = Hash::make($password);
+            $user->save();
+
+            $passwordReset = PasswordReset::where('email', $email);
+            DB::beginTransaction();
+            $passwordReset->delete();
+            DB::commit();
+
+            return $this->sendResponse([
+                'data' => 'Password changed!'
+            ]);
         } catch (Exception $exception) {
             Log::error($exception);
             return $this->sendError('Something went wrong, please contact administrator!', [], Response::HTTP_INTERNAL_SERVER_ERROR);
