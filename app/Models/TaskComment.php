@@ -4,10 +4,12 @@ namespace App\Models;
 
 use Illuminate\Database\Eloquent\Factories\HasFactory;
 use Illuminate\Database\Eloquent\Model;
+use Xetaio\Mentions\Models\Traits\HasMentionsTrait;
 
 class TaskComment extends Model
 {
     use HasFactory;
+    use HasMentionsTrait;
 
     /**
      * Get the User that owns the TaskComment
@@ -28,4 +30,8 @@ class TaskComment extends Model
     {
         return $this->belongsTo(Task::class, 'id');
     }
+
+    protected $fillable = [
+        'comment',
+    ];
 }

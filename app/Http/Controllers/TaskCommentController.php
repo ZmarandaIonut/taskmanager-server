@@ -2,6 +2,7 @@
 
 namespace App\Http\Controllers;
 
+use App\Models\BoardMembers;
 use App\Models\Task;
 use App\Models\TaskComment;
 use Exception;
@@ -17,7 +18,6 @@ class TaskCommentController extends ApiController
     public function add(Request $request)
     {
         try {
-
             $validate = Validator::make($request->all(), [
                 'comment' => 'required|max:200',
                 'task_id' => 'required|exists:tasks,id'
@@ -27,11 +27,19 @@ class TaskCommentController extends ApiController
                 return $this->sendError("Bad request", $validate->messages()->toArray());
             }
 
+            $comment = $request->get('comment');
+            $task_id = $request->get('task_id');
+            $user = Auth::user();
+            $board = Task::find($task_id)->status->board;
+
+            if (!BoardMembers::where("user_id", $user->id)->where("board_id", $board->id)->first()) {
+                return $this->sendError("Not allowed", [], Response::HTTP_UNAUTHORIZED);
+            }
 
             $taskComment = new TaskComment();
-            $taskComment->comment = $request->get('comment');
-            $taskComment->task_id = $request->get('task_id');
-            $taskComment->user_id = Auth::user()->id;
+            $taskComment->comment =  $comment;
+            $taskComment->task_id = $task_id;
+            $taskComment->user_id = $user->id;
             $taskComment->save();
 
             return $this->sendResponse($taskComment->toArray(), Response::HTTP_CREATED);
@@ -48,14 +56,25 @@ class TaskCommentController extends ApiController
             if (!$task) {
                 return $this->sendError('Task not found!', [], Response::HTTP_NOT_FOUND);
             }
+
+            $user = Auth::user();
+            $board = $task->status->board;
+
+            if (!BoardMembers::where("user_id", $user->id)->where("board_id", $board->id)->first()) {
+                return $this->sendError("Not allowed", [], Response::HTTP_UNAUTHORIZED);
+            }
+
             $comments = TaskComment::where('task_id', $task->id)->paginate(10);
             $result = [
-                "comments" => $comments,
+                "comments" => [],
                 "currentPage" => $comments->currentPage(),
                 "hasMorePages" => $comments->hasMorePages(),
                 "lastPage" => $comments->lastPage()
             ];
-            
+
+            foreach ($comments as $comment) {
+                $result["comments"][] = $comment;
+            }
 
             return $this->sendResponse($result);
         } catch (Exception $exception) {
@@ -70,6 +89,12 @@ class TaskCommentController extends ApiController
             $comment = TaskComment::find($comment_id);
             if (!$comment) {
                 return $this->sendError('Comment not found!', [], Response::HTTP_NOT_FOUND);
+            }
+            $user = Auth::user();
+            $board = Task::find($comment->task_id)->status->board;
+
+            if (!BoardMembers::where("user_id", $user->id)->where("board_id", $board->id)->first()) {
+                return $this->sendError("Not allowed", [], Response::HTTP_UNAUTHORIZED);
             }
 
             DB::beginTransaction();
