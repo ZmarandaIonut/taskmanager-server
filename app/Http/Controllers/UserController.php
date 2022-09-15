@@ -13,7 +13,6 @@ use Illuminate\Support\Facades\Log;
 use App\Models\User;
 use App\Notifications\ForgotPassword;
 use App\Notifications\VerifyEmail;
-use Carbon\Carbon;
 use Exception;
 use Illuminate\Http\Response;
 use Illuminate\Support\Facades\Auth;
@@ -27,6 +26,7 @@ class UserController extends ApiController
     {
         try {
             $user = Auth::user();
+
             return $this->sendResponse([
                 "user" => $user
             ]);
@@ -76,8 +76,8 @@ class UserController extends ApiController
             }
 
             $error = false;
-
             $user = User::where('email', $request->get("email"))->first();
+
             if (!$user) {
                 $error = true;
             } else {
@@ -91,6 +91,7 @@ class UserController extends ApiController
             if (!$user->email_verified_at) {
                 return $this->sendError('User didn\'t verify email address', [], Response::HTTP_NOT_ACCEPTABLE);
             }
+
             $token = $user->createToken("app");
 
             return $this->sendResponse([
@@ -98,10 +99,11 @@ class UserController extends ApiController
                 "user" => $user->toArray()
             ]);
         } catch (Exception $exception) {
-            error_log($request->get("password"));
+            Log::error($exception);
             return $this->sendError('Something went wrong, please contact administrator!', [], Response::HTTP_INTERNAL_SERVER_ERROR);
         }
     }
+
     public function verifyEmail(Request $request)
     {
         try {
@@ -128,32 +130,37 @@ class UserController extends ApiController
                 'data' => 'Email verified'
             ]);
         } catch (Exception $exception) {
-            error_log($exception);
+            Log::error($exception);
             return $this->sendError('Something went wrong, please contact administrator!', [], Response::HTTP_INTERNAL_SERVER_ERROR);
         }
     }
 
     public function resendVerifyEmailCode(Request $request)
     {
-        $validate = Validator::make($request->all(), [
-            "email" => 'required|email|exists:users,email'
-        ]);
+        try {
+            $validate = Validator::make($request->all(), [
+                "email" => 'required|email|exists:users,email'
+            ]);
 
-        if ($validate->fails()) {
-            return $this->sendError('Bad request!', $validate->messages()->toArray());
+            if ($validate->fails()) {
+                return $this->sendError('Bad request!', $validate->messages()->toArray());
+            }
+
+            $user = User::where("email", $request->get("email"))->first();
+
+            if ($user->email_verified_at) {
+                return $this->sendError('Email already verified', [], Response::HTTP_NOT_ACCEPTABLE);
+            }
+
+            $user->notify(new VerifyEmail($user->verify_token));
+
+            return $this->sendResponse([
+                'data' => 'Code for email verification sent!'
+            ]);
+        } catch (Exception $exception) {
+            Log::error($exception);
+            return $this->sendError('Something went wrong, please contact administrator!', [], Response::HTTP_INTERNAL_SERVER_ERROR);
         }
-
-        $user = User::where("email", $request->get("email"))->first();
-
-        if ($user->email_verified_at) {
-            return $this->sendError('Email already verified', [], Response::HTTP_NOT_ACCEPTABLE);
-        }
-
-        $user->notify(new VerifyEmail($user->verify_token));
-
-        return $this->sendResponse([
-            'data' => 'Code for email verification sent!'
-        ]);
     }
 
     public function getUserBoards()
@@ -162,15 +169,19 @@ class UserController extends ApiController
             $user = Auth::user();
             $boards = Board::query();
             $getBoards = $boards->where([["owner_id", $user->id], ["isArchived", false]])->paginate(10);
+
             $result = [
-                "boards" => $getBoards->items(),
+                "boards" => [],
                 "currentPage" => $getBoards->currentPage(),
                 "hasMorePages" => $getBoards->hasMorePages(),
                 "lastPage" => $getBoards->lastPage()
             ];
+
+            foreach ($getBoards as $board) {
+                $result["boards"][] = $board;
+            }
+
             return $this->sendResponse($result);
-            $boards = BoardMembers::where('user_id', $user->id)->get();
-            return $this->sendResponse($boards);
         } catch (Exception $exception) {
             Log::error($exception);
             return $this->sendError('Something went wrong, please contact administrator!', [], Response::HTTP_INTERNAL_SERVER_ERROR);
@@ -184,14 +195,17 @@ class UserController extends ApiController
             $boards = Board::query();
             $getBoards = $boards->where([["owner_id", $user->id], ["isArchived", true]])->paginate(10);
             $result = [
-                "boards" => $getBoards->items(),
+                "boards" => [],
                 "currentPage" => $getBoards->currentPage(),
                 "hasMorePages" => $getBoards->hasMorePages(),
                 "lastPage" => $getBoards->lastPage()
             ];
+
+            foreach ($getBoards as $board) {
+                $result["boards"][] = $board;
+            }
+
             return $this->sendResponse($result);
-            $boards = BoardMembers::where('user_id', $user->id)->get();
-            return $this->sendResponse($boards);
         } catch (Exception $exception) {
             Log::error($exception);
             return $this->sendError('Something went wrong, please contact administrator!', [], Response::HTTP_INTERNAL_SERVER_ERROR);
@@ -204,16 +218,19 @@ class UserController extends ApiController
             $authUser = Auth::user();
             $archivedTasks = ArchivedTasks::query();
             $getArchivedTaskForUser = $archivedTasks->where("archived_by", $authUser->id)->paginate(10);
+
             $result = [
                 "tasks" => [],
                 "currentPage" => $getArchivedTaskForUser->currentPage(),
                 "hasMorePages" => $getArchivedTaskForUser->hasMorePages(),
                 "lastPage" => $getArchivedTaskForUser->lastPage()
             ];
+
             foreach ($getArchivedTaskForUser->items() as $archivedTask) {
                 $task = $archivedTask->getTask;
                 $result["tasks"][] = $task;
             }
+
             return $this->sendResponse($result);
         } catch (Exception $exception) {
             Log::error($exception);
@@ -261,13 +278,13 @@ class UserController extends ApiController
 
             if ($validate->fails()) {
                 return $this->sendError('Bad request!', $validate->messages()->toArray());
-            }   
+            }
 
             $email = $request->get('email');
             $token = $request->get('token');
             $password = $request->get('password');
 
-            if(!PasswordReset::where('email', $email)->where('token', $token)->get()){
+            if (!PasswordReset::where('email', $email)->where('token', $token)->get()) {
                 return $this->sendError('Email or token incorrect!');
             }
 

@@ -7,34 +7,30 @@ use App\Models\BoardMembers;
 use App\Models\Status;
 use App\Models\Task;
 use App\Models\TaskAssignedTo;
-use App\Models\TaskComment;
 use Illuminate\Http\Request;
 use Illuminate\Support\Facades\Validator;
 use Illuminate\Http\Response;
 use Illuminate\Support\Facades\Log;
 use Exception;
-use Illuminate\Auth\Events\Validated;
 use Illuminate\Support\Facades\Auth;
 use Illuminate\Support\Facades\DB;
-
-use function Psy\debug;
 
 class TaskController extends ApiController
 {
     public function add(Request $request)
     {
         try {
-
             $validate = Validator::make($request->all(), [
                 'name' => 'required|max:50',
                 'status_id' => 'required|exists:statuses,id',
             ]);
+
             if ($validate->fails()) {
                 return $this->sendError("Bad request", $validate->messages()->toArray());
             }
-            $status = Status::find($request->get("status_id"));
 
             $authUser = Auth::user();
+            $status = Status::find($request->get("status_id"));
             $foundUser = BoardMembers::where("board_id", $status->board->id)->where("user_id", $authUser->id)->first();
 
             if (!$foundUser || $foundUser->role !== "Admin") {
@@ -44,7 +40,6 @@ class TaskController extends ApiController
             $task = new Task();
             $task->name = $request->get("name");
             $task->status_id = $request->get("status_id");
-
             $task->save();
 
             return $this->sendResponse($task->toArray(), Response::HTTP_CREATED);
@@ -70,6 +65,7 @@ class TaskController extends ApiController
             if (!$foundUser) {
                 return $this->sendError("Not allowed to perform this action", [], Response::HTTP_METHOD_NOT_ALLOWED);
             }
+
             return $this->sendResponse($tasks->toArray());
         } catch (Exception $exception) {
             Log::error($exception);
@@ -78,28 +74,10 @@ class TaskController extends ApiController
         }
     }
 
-    // public function get($id)
-    // {
-    //     try {
-    //         $task = Task::find($id);
-
-    //         if (!$task) {
-    //             return $this->sendError('task not found!', [], Response::HTTP_NOT_FOUND);
-    //         }
-
-    //         return $this->sendResponse($task->toArray());
-    //     } catch (Exception $exception) {
-    //         Log::error($exception);
-
-    //         return $this->sendError('Something went wrong, please contact administrator!', [], Response::HTTP_INTERNAL_SERVER_ERROR);
-    //     }
-    // }
-
     public function update($id, Request $request)
     {
         try {
             $task = Task::find($id);
-
             $authUser = Auth::user();
             $foundUser = BoardMembers::where("board_id", $task->status->board->id)->where("user_id", $authUser->id)->first();
 
@@ -119,16 +97,12 @@ class TaskController extends ApiController
                 return $this->sendError('Bad request!', $validator->messages()->toArray());
             }
 
-            $name = $request->get('name');
-
-
-            $task->name = $name;
+            $task->name = $request->get('name');
             $task->save();
 
             return $this->sendResponse($task->toArray());
         } catch (Exception $exception) {
             Log::error($exception);
-
             return $this->sendError('Something went wrong, please contact administrator!', [], Response::HTTP_INTERNAL_SERVER_ERROR);
         }
     }
@@ -136,8 +110,8 @@ class TaskController extends ApiController
     public function delete($id)
     {
         try {
-            $task = Task::find($id);
             $user = Auth::user();
+            $task = Task::find($id);
 
             if (!$task) {
                 return $this->sendError('task not found!', [], Response::HTTP_NOT_FOUND);
@@ -150,15 +124,12 @@ class TaskController extends ApiController
             }
 
             DB::beginTransaction();
-
             $task->delete();
-
             DB::commit();
 
             return $this->sendResponse([], Response::HTTP_NO_CONTENT);
         } catch (Exception $exception) {
             Log::error($exception);
-
             return $this->sendError('Something went wrong, please contact administrator!', [], Response::HTTP_INTERNAL_SERVER_ERROR);
         }
     }
@@ -166,12 +137,10 @@ class TaskController extends ApiController
     public function archive($id)
     {
         try {
-            $task = Task::find($id);
             $user = Auth::user();
+            $task = Task::find($id);
 
-            $boardOwnerId = $task->status->board->owner_id;
-
-            if ($user->id != $boardOwnerId) {
+            if ($user->id != $task->status->board->owner_id) {
                 return $this->sendError("Not allowed to perform this action", [], Response::HTTP_METHOD_NOT_ALLOWED);
             }
 
@@ -185,6 +154,7 @@ class TaskController extends ApiController
                 $archiveTask->archived_by = $user->id;
                 $archiveTask->save();
             }
+
             if ($task->isArchived) {
                 $archiveTask = ArchivedTasks::where("task_id", $task->id)->first();
                 $archiveTask->delete();
@@ -193,11 +163,9 @@ class TaskController extends ApiController
             $task->isArchived = $task->isArchived ? false : true;
             $task->save();
 
-
             return $this->sendResponse($task->toArray());
         } catch (Exception $exception) {
             Log::error($exception);
-
             return $this->sendError('Something went wrong, please contact administrator!', [], Response::HTTP_INTERNAL_SERVER_ERROR);
         }
     }
@@ -216,7 +184,6 @@ class TaskController extends ApiController
             }
 
             $authUser = Auth::user();
-
             $isUserAssignedToTask = TaskAssignedTo::where("assigned_to", $authUser->id)->where("task_id", $request->get("task_id"))->first();
             $getUserRole = BoardMembers::where("user_id", $authUser->id)->where("board_id", $request->get("board_id"))->first();
 
@@ -231,10 +198,10 @@ class TaskController extends ApiController
             $task = Task::find($request->get("task_id"));
             $task->isActive = $request->get("status");
             $task->save();
+
             return $this->sendResponse($task);
         } catch (Exception $exception) {
             Log::error($exception);
-            error_log($exception);
             return $this->sendError('Something went wrong, please contact administrator!', [], Response::HTTP_INTERNAL_SERVER_ERROR);
         }
     }
