@@ -299,7 +299,7 @@ class BoardController extends ApiController
         }
     }
 
-    public function getBoardMembers($slug)
+    public function getBoardMembers($slug, Request $request)
     {
         try {
             $board = Board::where("slug", $slug)->first();
@@ -317,24 +317,38 @@ class BoardController extends ApiController
                 }
             }
 
-            $members = BoardMembers::query();
+            if ($request->has("search")) {
+                $searchInput = $request->get("search");
+                $users = User::where("email", "LIKE", $searchInput . "%")
+                ->whereHas('getBoardMembers', function ($q) use($board) {
+                    $q->where('board_id', $board->id);
+                })
+                ->get();
 
-            $boardMembers = $members->where("board_id", $board->id)->paginate(30);
+                $boardMembers = $board->getMembers;
 
-            $result = [];
+                return $this->sendResponse($users);
+            } 
+            else{
+                $members = BoardMembers::query();
 
-            foreach ($boardMembers->items() as $idx => $member) {
-                $result[] = $member->toArray();
-                $result[$idx]["email"] = $member->getUser["email"];
+                $boardMembers = $members->where("board_id", $board->id)->paginate(30);
+    
+                $result = [];
+    
+                foreach ($boardMembers->items() as $idx => $member) {
+                    $result[] = $member->toArray();
+                    $result[$idx]["email"] = $member->getUser["email"];
+                }
+                $data = [
+                    "members" => $result,
+                    "currentPage" => $boardMembers->currentPage(),
+                    "hasMorePages" => $boardMembers->hasMorePages(),
+                    "lastPage" => $boardMembers->lastPage(),
+                    "totalMembers" => $boardMembers->total()
+                ];
+                return $this->sendResponse($data);
             }
-            $data = [
-                "members" => $result,
-                "currentPage" => $boardMembers->currentPage(),
-                "hasMorePages" => $boardMembers->hasMorePages(),
-                "lastPage" => $boardMembers->lastPage(),
-                "totalMembers" => $boardMembers->total()
-            ];
-            return $this->sendResponse($data);
         } catch (Exception $exception) {
             return $this->sendError('Something went wrong, please contact administrator!', [], Response::HTTP_INTERNAL_SERVER_ERROR);
         }
