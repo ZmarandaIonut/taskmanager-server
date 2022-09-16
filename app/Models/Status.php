@@ -9,7 +9,7 @@ class Status extends Model
 {
     use HasFactory;
 
-     /**
+    /**
      * The attributes that are mass assignable.
      *
      * @var array<int, string>
@@ -42,5 +42,4 @@ class Status extends Model
     {
         return $this->hasMany(Task::class, 'status_id');
     }
-
 }
