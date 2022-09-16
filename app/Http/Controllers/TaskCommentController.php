@@ -23,7 +23,7 @@ class TaskCommentController extends ApiController
             $validate = Validator::make($request->all(), [
                 'comment' => 'required|max:200',
                 'task_id' => 'required|exists:tasks,id',
-                'tagged_user_id' => 'nullable|exists:users,id'
+                'tagged_user_email' => 'nullable'
             ]);
 
             if ($validate->fails()) {
@@ -37,13 +37,17 @@ class TaskCommentController extends ApiController
                 return $this->sendError("Not allowed to perform this action", []);
             }
 
+            $tagged_user = User::where("email", $request->get("tagged_user_email"))->first();
+            if ($authUser->id == $tagged_user->id) {
+                return $this->sendError("You cannot tag yourself");
+            }
+
             $taskComment = new TaskComment();
             $taskComment->comment = $request->get('comment');
             $taskComment->task_id = $request->get('task_id');
             $taskComment->user_email = $authUser->email;
             $taskComment->save();
 
-            $tagged_user = User::find($request->get('tagged_user_id'));
 
             if ($tagged_user) {
                 if (!BoardMembers::where('board_id', $task->status->board->id)->where('user_id', $tagged_user->id)->first()) {
