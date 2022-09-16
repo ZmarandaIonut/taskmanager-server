@@ -7,6 +7,7 @@ use App\Models\BoardMembers;
 use App\Models\Status;
 use App\Models\Task;
 use App\Models\TaskAssignedTo;
+use App\Models\TaskHistory;
 use Illuminate\Http\Request;
 use Illuminate\Support\Facades\Validator;
 use Illuminate\Http\Response;
@@ -41,6 +42,12 @@ class TaskController extends ApiController
             $task->name = $request->get("name");
             $task->status_id = $request->get("status_id");
             $task->save();
+
+            $taskHistory = new TaskHistory();
+            $taskHistory->task_id = $task->id;
+            $taskHistory->user_id = $authUser->id;
+            $taskHistory->action = "created the task";
+            $taskHistory->save();
 
             return $this->sendResponse($task->toArray(), Response::HTTP_CREATED);
         } catch (Exception $exception) {
@@ -97,8 +104,15 @@ class TaskController extends ApiController
                 return $this->sendError('Bad request!', $validator->messages()->toArray());
             }
 
+            $prevTaskName = $task->name;
             $task->name = $request->get('name');
             $task->save();
+
+            $taskHistory = new TaskHistory();
+            $taskHistory->task_id = $task->id;
+            $taskHistory->user_id = $authUser->id;
+            $taskHistory->action = "changed task name from {$prevTaskName} to {$task->name}";
+            $taskHistory->save();
 
             return $this->sendResponse($task->toArray());
         } catch (Exception $exception) {
@@ -153,11 +167,21 @@ class TaskController extends ApiController
                 $archiveTask->task_id = $task->id;
                 $archiveTask->archived_by = $user->id;
                 $archiveTask->save();
-            }
 
-            if ($task->isArchived) {
+                $taskHistory = new TaskHistory();
+                $taskHistory->task_id = $task->id;
+                $taskHistory->user_id = $user->id;
+                $taskHistory->action = "archived the task";
+                $taskHistory->save();
+            } else {
                 $archiveTask = ArchivedTasks::where("task_id", $task->id)->first();
                 $archiveTask->delete();
+
+                $taskHistory = new TaskHistory();
+                $taskHistory->task_id = $task->id;
+                $taskHistory->user_id = $user->id;
+                $taskHistory->action = "unarchived the task";
+                $taskHistory->save();
             }
 
             $task->isArchived = $task->isArchived ? false : true;
@@ -195,13 +219,57 @@ class TaskController extends ApiController
                 return $this->sendError("Not allowed to perform this action", [], Response::HTTP_METHOD_NOT_ALLOWED);
             }
 
+            $status = $request->get("status");
             $task = Task::find($request->get("task_id"));
-            $task->isActive = $request->get("status");
+            $task->isActive = $status;
             $task->save();
+
+            $taskHistory = new TaskHistory();
+            $taskHistory->task_id = $task->id;
+            $taskHistory->user_id = $authUser->id;
+            $taskHistory->action = 'changed task status to ' . ($status ? 'active' : 'inactive');
+            $taskHistory->save();
 
             return $this->sendResponse($task);
         } catch (Exception $exception) {
             Log::error($exception);
+            return $this->sendError('Something went wrong, please contact administrator!', [], Response::HTTP_INTERNAL_SERVER_ERROR);
+        }
+    }
+
+    public function getTaskHistory($task_id)
+    {
+        try {
+            $task = Task::find($task_id);
+
+            if (!$task) {
+                return $this->sendError('task not found!', [], Response::HTTP_NOT_FOUND);
+            }
+
+            $authUser = Auth::user();
+            $foundUser = BoardMembers::where("board_id", $task->status->board->id)->where("user_id", $authUser->id)->first();
+
+            if (!$foundUser) {
+                return $this->sendError("Not allowed to perform this action", [], Response::HTTP_METHOD_NOT_ALLOWED);
+            }
+
+            $taskHistory = TaskHistory::where('task_id', $task->id)->paginate(10);
+
+            $result = [
+                "task_history" => [],
+                "currentPage" => $taskHistory->currentPage(),
+                "hasMorePages" => $taskHistory->hasMorePages(),
+                "lastPage" => $taskHistory->lastPage()
+            ];
+
+            foreach ($taskHistory as $task_history) {
+                $result["task_history"][] = $task_history;
+            }
+
+            return $this->sendResponse($result);
+        } catch (Exception $exception) {
+            Log::error($exception);
+
             return $this->sendError('Something went wrong, please contact administrator!', [], Response::HTTP_INTERNAL_SERVER_ERROR);
         }
     }

@@ -27,4 +27,9 @@ class Task extends Model
     {
         return $this->hasMany(TaskComment::class, 'id');
     }
+
+    public function history()
+    {
+        return $this->hasMany(TaskHistory::class, 'task_id');
+    }
 }
