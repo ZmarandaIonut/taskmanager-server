@@ -38,7 +38,7 @@ class TaskCommentController extends ApiController
             }
 
             $tagged_user = User::where("email", $request->get("tagged_user_email"))->first();
-            if ($authUser->id == $tagged_user->id) {
+            if ($tagged_user && $authUser->id == $tagged_user->id) {
                 return $this->sendError("You cannot tag yourself");
             }
 
