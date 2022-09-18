@@ -46,7 +46,7 @@ class TaskController extends ApiController
             $taskHistory = new TaskHistory();
             $taskHistory->task_id = $task->id;
             $taskHistory->user_id = $authUser->id;
-            $taskHistory->action = "created the task";
+            $taskHistory->action =  "$authUser->email" . " created the task";
             $taskHistory->save();
 
             return $this->sendResponse($task->toArray(), Response::HTTP_CREATED);
@@ -111,7 +111,7 @@ class TaskController extends ApiController
             $taskHistory = new TaskHistory();
             $taskHistory->task_id = $task->id;
             $taskHistory->user_id = $authUser->id;
-            $taskHistory->action = "changed task name from {$prevTaskName} to {$task->name}";
+            $taskHistory->action =  "$authUser->email" . " changed task name from {$prevTaskName} to {$task->name}";
             $taskHistory->save();
 
             return $this->sendResponse($task->toArray());
@@ -171,7 +171,7 @@ class TaskController extends ApiController
                 $taskHistory = new TaskHistory();
                 $taskHistory->task_id = $task->id;
                 $taskHistory->user_id = $user->id;
-                $taskHistory->action = "archived the task";
+                $taskHistory->action =  "$user->email" . " archived the task";
                 $taskHistory->save();
             } else {
                 $archiveTask = ArchivedTasks::where("task_id", $task->id)->first();
@@ -180,7 +180,7 @@ class TaskController extends ApiController
                 $taskHistory = new TaskHistory();
                 $taskHistory->task_id = $task->id;
                 $taskHistory->user_id = $user->id;
-                $taskHistory->action = "unarchived the task";
+                $taskHistory->action = "$user->email" . " unarchived the task";
                 $taskHistory->save();
             }
 
@@ -227,7 +227,7 @@ class TaskController extends ApiController
             $taskHistory = new TaskHistory();
             $taskHistory->task_id = $task->id;
             $taskHistory->user_id = $authUser->id;
-            $taskHistory->action = 'changed task status to ' . ($status ? 'active' : 'inactive');
+            $taskHistory->action =  "$authUser->email" . ' changed task status to ' . ($status ? 'active' : 'inactive');
             $taskHistory->save();
 
             return $this->sendResponse($task);
@@ -253,7 +253,7 @@ class TaskController extends ApiController
                 return $this->sendError("Not allowed to perform this action", [], Response::HTTP_METHOD_NOT_ALLOWED);
             }
 
-            $taskHistory = TaskHistory::where('task_id', $task->id)->paginate(10);
+            $taskHistory = TaskHistory::where('task_id', $task->id)->orderBy("created_at", "DESC")->paginate(30);
 
             $result = [
                 "task_history" => [],

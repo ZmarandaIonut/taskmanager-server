@@ -41,7 +41,7 @@ class TaskCommentController extends ApiController
             if ($tagged_user && $authUser->id == $tagged_user->id) {
                 return $this->sendError("You cannot tag yourself");
             }
-
+            error_log($tagged_user);
             $taskComment = new TaskComment();
             $taskComment->comment = $request->get('comment');
             $taskComment->task_id = $request->get('task_id');
