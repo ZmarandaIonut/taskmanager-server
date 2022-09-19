@@ -5,6 +5,7 @@ namespace App\Http\Controllers;
 use App\Models\BoardMembers;
 use App\Models\Task;
 use App\Models\TaskComment;
+use App\Models\TaskHistory;
 use App\Models\User;
 use App\Models\UserNotifications;
 use Exception;
@@ -119,6 +120,16 @@ class TaskCommentController extends ApiController
             DB::beginTransaction();
             $comment->delete();
             DB::commit();
+
+            $taskHistory = new TaskHistory();
+            $taskHistory->task_id = $comment->task_id;
+            $taskHistory->user_id = $user->id;
+            if ($user->email === $comment->user_email) {
+                $taskHistory->action = "{$user->email}" . " deleted own comment";
+            } else {
+                $taskHistory->action = "{$user->email}" . " deleted {$comment->user_email}`s comment";
+            }
+            $taskHistory->save();
 
             return $this->sendResponse([], Response::HTTP_NO_CONTENT);
         } catch (Exception $exception) {

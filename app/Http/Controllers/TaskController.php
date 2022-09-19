@@ -8,13 +8,13 @@ use App\Models\Status;
 use App\Models\Task;
 use App\Models\TaskAssignedTo;
 use App\Models\TaskHistory;
-use Illuminate\Http\Request;
-use Illuminate\Support\Facades\Validator;
-use Illuminate\Http\Response;
-use Illuminate\Support\Facades\Log;
 use Exception;
+use Illuminate\Http\Request;
+use Illuminate\Http\Response;
 use Illuminate\Support\Facades\Auth;
 use Illuminate\Support\Facades\DB;
+use Illuminate\Support\Facades\Log;
+use Illuminate\Support\Facades\Validator;
 
 class TaskController extends ApiController
 {
@@ -46,7 +46,7 @@ class TaskController extends ApiController
             $taskHistory = new TaskHistory();
             $taskHistory->task_id = $task->id;
             $taskHistory->user_id = $authUser->id;
-            $taskHistory->action =  "$authUser->email" . " created the task";
+            $taskHistory->action = "$authUser->email" . " created the task";
             $taskHistory->save();
 
             return $this->sendResponse($task->toArray(), Response::HTTP_CREATED);
@@ -111,37 +111,10 @@ class TaskController extends ApiController
             $taskHistory = new TaskHistory();
             $taskHistory->task_id = $task->id;
             $taskHistory->user_id = $authUser->id;
-            $taskHistory->action =  "$authUser->email" . " changed task name from {$prevTaskName} to {$task->name}";
+            $taskHistory->action = "$authUser->email" . " changed task name from {$prevTaskName} to {$task->name}";
             $taskHistory->save();
 
             return $this->sendResponse($task->toArray());
-        } catch (Exception $exception) {
-            Log::error($exception);
-            return $this->sendError('Something went wrong, please contact administrator!', [], Response::HTTP_INTERNAL_SERVER_ERROR);
-        }
-    }
-
-    public function delete($id)
-    {
-        try {
-            $user = Auth::user();
-            $task = Task::find($id);
-
-            if (!$task) {
-                return $this->sendError('task not found!', [], Response::HTTP_NOT_FOUND);
-            }
-
-            $foundUser = BoardMembers::where("board_id", $task->status->board->id)->where("user_id", $user->id)->first();
-
-            if (!$foundUser || $foundUser->role !== "Admin") {
-                return $this->sendError("Not allowed to perform this action", [], Response::HTTP_METHOD_NOT_ALLOWED);
-            }
-
-            DB::beginTransaction();
-            $task->delete();
-            DB::commit();
-
-            return $this->sendResponse([], Response::HTTP_NO_CONTENT);
         } catch (Exception $exception) {
             Log::error($exception);
             return $this->sendError('Something went wrong, please contact administrator!', [], Response::HTTP_INTERNAL_SERVER_ERROR);
@@ -171,7 +144,7 @@ class TaskController extends ApiController
                 $taskHistory = new TaskHistory();
                 $taskHistory->task_id = $task->id;
                 $taskHistory->user_id = $user->id;
-                $taskHistory->action =  "$user->email" . " archived the task";
+                $taskHistory->action = "$user->email" . " archived the task";
                 $taskHistory->save();
             } else {
                 $archiveTask = ArchivedTasks::where("task_id", $task->id)->first();
@@ -188,6 +161,33 @@ class TaskController extends ApiController
             $task->save();
 
             return $this->sendResponse($task->toArray());
+        } catch (Exception $exception) {
+            Log::error($exception);
+            return $this->sendError('Something went wrong, please contact administrator!', [], Response::HTTP_INTERNAL_SERVER_ERROR);
+        }
+    }
+
+    public function delete($id)
+    {
+        try {
+            $user = Auth::user();
+            $task = Task::find($id);
+
+            if (!$task) {
+                return $this->sendError('task not found!', [], Response::HTTP_NOT_FOUND);
+            }
+
+            $foundUser = BoardMembers::where("board_id", $task->status->board->id)->where("user_id", $user->id)->first();
+
+            if (!$foundUser || $foundUser->role !== "Admin") {
+                return $this->sendError("Not allowed to perform this action", [], Response::HTTP_METHOD_NOT_ALLOWED);
+            }
+
+            DB::beginTransaction();
+            $task->delete();
+            DB::commit();
+
+            return $this->sendResponse([], Response::HTTP_NO_CONTENT);
         } catch (Exception $exception) {
             Log::error($exception);
             return $this->sendError('Something went wrong, please contact administrator!', [], Response::HTTP_INTERNAL_SERVER_ERROR);
@@ -227,7 +227,7 @@ class TaskController extends ApiController
             $taskHistory = new TaskHistory();
             $taskHistory->task_id = $task->id;
             $taskHistory->user_id = $authUser->id;
-            $taskHistory->action =  "$authUser->email" . ' changed task status to ' . ($status ? 'active' : 'inactive');
+            $taskHistory->action = "$authUser->email" . ' changed task status to ' . ($status ? 'active' : 'inactive');
             $taskHistory->save();
 
             return $this->sendResponse($task);

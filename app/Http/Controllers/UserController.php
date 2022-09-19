@@ -4,19 +4,18 @@ namespace App\Http\Controllers;
 
 use App\Models\ArchivedTasks;
 use App\Models\Board;
-use App\Models\BoardMembers;
 use App\Models\PasswordReset;
-use Illuminate\Http\Request;
-use Illuminate\Support\Facades\Validator;
-use Illuminate\Support\Facades\Hash;
-use Illuminate\Support\Facades\Log;
 use App\Models\User;
 use App\Notifications\ForgotPassword;
 use App\Notifications\VerifyEmail;
 use Exception;
+use Illuminate\Http\Request;
 use Illuminate\Http\Response;
 use Illuminate\Support\Facades\Auth;
 use Illuminate\Support\Facades\DB;
+use Illuminate\Support\Facades\Hash;
+use Illuminate\Support\Facades\Log;
+use Illuminate\Support\Facades\Validator;
 use Illuminate\Support\Str;
 
 class UserController extends ApiController
@@ -35,6 +34,7 @@ class UserController extends ApiController
             return $this->sendError('Something went wrong, please contact administrator!', [], Response::HTTP_INTERNAL_SERVER_ERROR);
         }
     }
+
     public function register(Request $request)
     {
         try {
@@ -63,6 +63,7 @@ class UserController extends ApiController
             return $this->sendError('Something went wrong, please contact administrator!', [], Response::HTTP_INTERNAL_SERVER_ERROR);
         }
     }
+
     public function login(Request $request)
     {
         try {

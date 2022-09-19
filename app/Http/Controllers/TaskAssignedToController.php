@@ -6,12 +6,14 @@ use App\Models\Board;
 use App\Models\BoardMembers;
 use App\Models\Task;
 use App\Models\TaskAssignedTo;
+use App\Models\TaskHistory;
 use App\Models\User;
 use App\Models\UserNotifications;
 use Exception;
 use Illuminate\Http\Request;
 use Illuminate\Http\Response;
 use Illuminate\Support\Facades\Auth;
+use Illuminate\Support\Facades\Log;
 use Illuminate\Support\Facades\Validator;
 
 class TaskAssignedToController extends ApiController
@@ -57,9 +59,19 @@ class TaskAssignedToController extends ApiController
             $userNotification->message = "You have been assigned to a new task, board: {$board->name}, task: {$task->name}";
             $userNotification->save();
 
+            $taskHistory = new TaskHistory();
+            $taskHistory->task_id = $task->id;
+            $taskHistory->user_id = $user->id;
+            if ($user->email === $authUser->email) {
+                $taskHistory->action = "{$user->email} assigned himself task {$task->name}";
+            } else {
+                $taskHistory->action = "{$user->email} has been assigned to task {$task->name} by {$authUser->email}";
+            }
+            $taskHistory->save();
+
             return $this->sendResponse([], 201);
         } catch (Exception $exception) {
-            error_log($exception);
+            Log::error($exception);
             return $this->sendError('Something went wrong, please contact administrator!', [], Response::HTTP_INTERNAL_SERVER_ERROR);
         }
     }

@@ -11,12 +11,12 @@ use App\Notifications\SendBoardInvite;
 use Carbon\Carbon;
 use Exception;
 use Illuminate\Http\Request;
-use Illuminate\Support\Facades\Validator;
 use Illuminate\Http\Response;
 use Illuminate\Support\Facades\Auth;
 use Illuminate\Support\Facades\DB;
 use Illuminate\Support\Facades\Log;
 use Illuminate\Support\Facades\Notification as FacadesNotification;
+use Illuminate\Support\Facades\Validator;
 use Illuminate\Support\Str;
 
 class BoardController extends ApiController
@@ -82,32 +82,6 @@ class BoardController extends ApiController
             $board->save();
 
             return $this->sendResponse($board->toArray());
-        } catch (Exception $exception) {
-            Log::error($exception);
-            return $this->sendError('Something went wrong, please contact administrator!', [], Response::HTTP_INTERNAL_SERVER_ERROR);
-        }
-    }
-
-    public function delete($id)
-    {
-        try {
-            $board = Board::find($id);
-
-            if (!$board) {
-                return $this->sendError("Board not found", [], Response::HTTP_NOT_FOUND);
-            }
-
-            $user = Auth::user();
-
-            if ($user->id !== $board->owner_id && !$user->isSuperAdmin) {
-                return $this->sendError("Not allowed to delete this board", [], Response::HTTP_METHOD_NOT_ALLOWED);
-            }
-
-            DB::beginTransaction();
-            $board->delete();
-            DB::commit();
-
-            return $this->sendResponse([], Response::HTTP_NO_CONTENT);
         } catch (Exception $exception) {
             Log::error($exception);
             return $this->sendError('Something went wrong, please contact administrator!', [], Response::HTTP_INTERNAL_SERVER_ERROR);
@@ -200,6 +174,7 @@ class BoardController extends ApiController
             return $this->sendError('Something went wrong, please contact administrator!', [], Response::HTTP_INTERNAL_SERVER_ERROR);
         }
     }
+
     public function acceptInvite(Request $request)
     {
         try {
@@ -233,6 +208,33 @@ class BoardController extends ApiController
             return $this->sendError('Something went wrong, please contact administrator!', [], Response::HTTP_INTERNAL_SERVER_ERROR);
         }
     }
+
+    public function delete($id)
+    {
+        try {
+            $board = Board::find($id);
+
+            if (!$board) {
+                return $this->sendError("Board not found", [], Response::HTTP_NOT_FOUND);
+            }
+
+            $user = Auth::user();
+
+            if ($user->id !== $board->owner_id && !$user->isSuperAdmin) {
+                return $this->sendError("Not allowed to delete this board", [], Response::HTTP_METHOD_NOT_ALLOWED);
+            }
+
+            DB::beginTransaction();
+            $board->delete();
+            DB::commit();
+
+            return $this->sendResponse([], Response::HTTP_NO_CONTENT);
+        } catch (Exception $exception) {
+            Log::error($exception);
+            return $this->sendError('Something went wrong, please contact administrator!', [], Response::HTTP_INTERNAL_SERVER_ERROR);
+        }
+    }
+
     public function getBoardsWhereUserIsMember()
     {
         try {
@@ -327,21 +329,20 @@ class BoardController extends ApiController
             if ($request->has("search")) {
                 $searchInput = $request->get("search");
                 $users = User::where("email", "LIKE", $searchInput . "%")
-                ->whereHas('getBoardMembers', function ($q) use($board) {
-                    $q->where('board_id', $board->id);
-                })
-                ->get();
+                    ->whereHas('getBoardMembers', function ($q) use ($board) {
+                        $q->where('board_id', $board->id);
+                    })
+                    ->get();
 
                 $boardMembers = $board->getMembers;
 
                 return $this->sendResponse($users);
-            } 
-            else{
+            } else {
                 $members = BoardMembers::query();
                 $boardMembers = $members->where("board_id", $board->id)->paginate(30);
-    
+
                 $result = [];
-    
+
                 foreach ($boardMembers->items() as $idx => $member) {
                     $result[] = $member->toArray();
                     $result[$idx]["email"] = $member->getUser["email"];

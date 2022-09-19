@@ -4,17 +4,22 @@ namespace App\Models;
 
 use Illuminate\Database\Eloquent\Factories\HasFactory;
 use Illuminate\Database\Eloquent\Model;
+use Illuminate\Database\Eloquent\Relations\BelongsTo;
 
 class TaskComment extends Model
 {
     use HasFactory;
 
+    protected $fillable = [
+        'comment',
+    ];
+
     /**
      * Get the User that owns the TaskComment
      *
-     * @return \Illuminate\Database\Eloquent\Relations\BelongsTo
+     * @return BelongsTo
      */
-    public function User()
+    public function user()
     {
         return $this->belongsTo(User::class, 'id');
     }
@@ -22,14 +27,10 @@ class TaskComment extends Model
     /**
      * Get the Task that owns the TaskComment
      *
-     * @return \Illuminate\Database\Eloquent\Relations\BelongsTo
+     * @return BelongsTo
      */
-    public function Task()
+    public function task()
     {
         return $this->belongsTo(Task::class, 'id');
     }
-
-    protected $fillable = [
-        'comment',
-    ];
 }
