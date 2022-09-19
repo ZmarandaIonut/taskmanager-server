@@ -23,9 +23,9 @@ class User extends Authenticatable
         'password',
     ];
 
-    protected $visible = [
-        'id', 'name', 'email', "isSuperAdmin"
-    ];
+    // protected $visible = [
+    //     'id', 'name', 'email', "isSuperAdmin"
+    // ];
 
     /**
      * The attributes that should be hidden for serialization.
@@ -50,5 +50,10 @@ class User extends Authenticatable
     public function getBoards()
     {
         return $this->hasMany(Board::class, "owner_id", "id");
+    }
+
+    public function getBoardMembers()
+    {
+        return $this->hasMany(BoardMembers::class);
     }
 }

@@ -5,24 +5,19 @@ namespace App\Http\Controllers;
 use App\Models\Board;
 use App\Models\BoardInvites;
 use App\Models\BoardMembers;
-use App\Models\Boards;
-use App\Models\Task;
 use App\Models\User;
+use App\Models\UserNotifications;
 use App\Notifications\SendBoardInvite;
-use App\Notifications\VerifyEmail;
 use Carbon\Carbon;
 use Exception;
 use Illuminate\Http\Request;
-use Illuminate\Support\Facades\Validator;
 use Illuminate\Http\Response;
-use Illuminate\Notifications\Notification as NotificationsNotification;
-use Notification;
 use Illuminate\Support\Facades\Auth;
 use Illuminate\Support\Facades\DB;
 use Illuminate\Support\Facades\Log;
 use Illuminate\Support\Facades\Notification as FacadesNotification;
+use Illuminate\Support\Facades\Validator;
 use Illuminate\Support\Str;
-use \Laravel\Sanctum\PersonalAccessToken;
 
 class BoardController extends ApiController
 {
@@ -33,16 +28,16 @@ class BoardController extends ApiController
             $validate = Validator::make($request->all(), [
                 'name' => 'required|max:50',
             ]);
+
             if ($validate->fails()) {
                 return $this->sendError("Bad request", $validate->messages()->toArray());
             }
-            $authUser = Auth::user();
 
+            $authUser = Auth::user();
             $board = new Board();
             $board->name = $request->get("name");
             $board->owner_id = $authUser->id;
             $board->slug = Str::random(15);
-
             $board->save();
 
             $boardMember = new BoardMembers();
@@ -50,9 +45,7 @@ class BoardController extends ApiController
             $boardMember->user_id = $board->owner_id;
             $boardMember->role = "Admin";
             $boardMember->isBoardOwner = 1;
-
             $boardMember->save();
-
 
             return $this->sendResponse($board->toArray(), Response::HTTP_CREATED);
         } catch (Exception $exception) {
@@ -65,6 +58,7 @@ class BoardController extends ApiController
     {
         try {
             $board = Board::find($id);
+
             if (!$board) {
                 return $this->sendError("Board not found", [], Response::HTTP_NOT_FOUND);
             }
@@ -85,33 +79,9 @@ class BoardController extends ApiController
             }
 
             $board->name = $request->get("name");
-
             $board->save();
+
             return $this->sendResponse($board->toArray());
-        } catch (Exception $exception) {
-            Log::error($exception);
-            return $this->sendError('Something went wrong, please contact administrator!', [], Response::HTTP_INTERNAL_SERVER_ERROR);
-        }
-    }
-
-    public function delete($id)
-    {
-        try {
-            $board = Board::find($id);
-            if (!$board) {
-                return $this->sendError("Board not found", [], Response::HTTP_NOT_FOUND);
-            }
-            $user = Auth::user();
-
-            if ($user->id !== $board->owner_id && !$user->isSuperAdmin) {
-                return $this->sendError("Not allowed to delete this board", [], Response::HTTP_METHOD_NOT_ALLOWED);
-            }
-
-            DB::beginTransaction();
-            $board->delete();
-            DB::commit();
-
-            return $this->sendResponse([], Response::HTTP_NO_CONTENT);
         } catch (Exception $exception) {
             Log::error($exception);
             return $this->sendError('Something went wrong, please contact administrator!', [], Response::HTTP_INTERNAL_SERVER_ERROR);
@@ -121,8 +91,8 @@ class BoardController extends ApiController
     public function archive($id)
     {
         try {
-            $board = Board::find($id);
             $user = Auth::user();
+            $board = Board::find($id);
 
             if (!$board) {
                 return $this->sendError('Board not found!', [], Response::HTTP_NOT_FOUND);
@@ -140,7 +110,6 @@ class BoardController extends ApiController
             return $this->sendResponse($board->toArray());
         } catch (Exception $exception) {
             Log::error($exception);
-
             return $this->sendError('Something went wrong, please contact administrator!', [], Response::HTTP_INTERNAL_SERVER_ERROR);
         }
     }
@@ -152,11 +121,12 @@ class BoardController extends ApiController
                 'board_id' => 'required|exists:boards,id',
                 'email' => 'required|email'
             ]);
+
             if ($validate->fails()) {
                 return $this->sendError($validate->messages()->toArray());
             }
-            $authUser = Auth::user();
 
+            $authUser = Auth::user();
             $foundUser = BoardMembers::where("board_id", $request->get("board_id"))->where("user_id", $authUser->id)->first();
 
             if (!$foundUser || $foundUser->role !== "Admin") {
@@ -167,11 +137,11 @@ class BoardController extends ApiController
 
             if ($getInvitedUser) {
                 $foundInvitedUserAsMemeber = BoardMembers::where("board_id", $request->get("board_id"))->where("user_id", $getInvitedUser->id)->first();
-
                 if ($foundInvitedUserAsMemeber) {
                     return $this->sendError("User already is a board member!", [], Response::HTTP_NOT_ACCEPTABLE);
                 }
             }
+
             $lastUserboardInvite = BoardInvites::where('email', $request->get('email'))
                 ->orderBy('created_at', 'DESC')
                 ->first();
@@ -185,17 +155,26 @@ class BoardController extends ApiController
             $code = Str::random(6);
 
             FacadesNotification::route("mail", $request->get("email"))->notify(new SendBoardInvite($code, $authUser->name));
+
             $boardInvites = new BoardInvites();
             $boardInvites->board_id = $request->get("board_id");
             $boardInvites->email = $request->get("email");
             $boardInvites->code = $code;
             $boardInvites->save();
 
+            if ($getInvitedUser) {
+                $userNotification = new UserNotifications();
+                $userNotification->user_id = $getInvitedUser->id;
+                $userNotification->message = "{$authUser->name} has invited you to join his board, code: {$code}";
+                $userNotification->save();
+            }
+
             return $this->sendResponse(['Code for joining the board has been sent to the user email.']);
         } catch (Exception $exception) {
             return $this->sendError('Something went wrong, please contact administrator!', [], Response::HTTP_INTERNAL_SERVER_ERROR);
         }
     }
+
     public function acceptInvite(Request $request)
     {
         try {
@@ -206,8 +185,10 @@ class BoardController extends ApiController
             if ($validate->fails()) {
                 return $this->sendError($validate->messages()->toArray());
             }
+
             $authUser = Auth::user();
             $checkUser = BoardInvites::where("code", $request->get("code"))->first();
+
             if (!$checkUser) {
                 return $this->sendError("Invalid code", []);
             }
@@ -227,24 +208,55 @@ class BoardController extends ApiController
             return $this->sendError('Something went wrong, please contact administrator!', [], Response::HTTP_INTERNAL_SERVER_ERROR);
         }
     }
+
+    public function delete($id)
+    {
+        try {
+            $board = Board::find($id);
+
+            if (!$board) {
+                return $this->sendError("Board not found", [], Response::HTTP_NOT_FOUND);
+            }
+
+            $user = Auth::user();
+
+            if ($user->id !== $board->owner_id && !$user->isSuperAdmin) {
+                return $this->sendError("Not allowed to delete this board", [], Response::HTTP_METHOD_NOT_ALLOWED);
+            }
+
+            DB::beginTransaction();
+            $board->delete();
+            DB::commit();
+
+            return $this->sendResponse([], Response::HTTP_NO_CONTENT);
+        } catch (Exception $exception) {
+            Log::error($exception);
+            return $this->sendError('Something went wrong, please contact administrator!', [], Response::HTTP_INTERNAL_SERVER_ERROR);
+        }
+    }
+
     public function getBoardsWhereUserIsMember()
     {
         try {
             $authUser = Auth::user();
             $getUsers = BoardMembers::query();
             $getUser = $getUsers->where("user_id", $authUser->id)->where("isBoardOwner", 0)->paginate(10);
+
             $result = [
                 "boards" => [],
                 "currentPage" => $getUser->currentPage(),
                 "hasMorePages" => $getUser->hasMorePages(),
                 "lastPage" => $getUser->lastPage()
             ];
+
             foreach ($getUser->items() as $userBoardMember) {
                 $board = $userBoardMember->getBoards;
+
                 if (!$board->isArchived) {
                     $result["boards"][] = $board;
                 }
             }
+
             return $this->sendResponse($result);
         } catch (Exception $exception) {
             return $this->sendError('Something went wrong, please contact administrator!', [], Response::HTTP_INTERNAL_SERVER_ERROR);
@@ -255,11 +267,12 @@ class BoardController extends ApiController
     {
         try {
             $board = Board::where("slug", $slug)->first();
+
             if (!$board) {
                 return $this->sendError("Board not found", [], Response::HTTP_NOT_FOUND);
             }
-            $authUser = Auth::user();
 
+            $authUser = Auth::user();
             $getUserAsBoardMember = BoardMembers::where("board_id", $board->id)->where("user_id", $authUser->id)->first();
 
             if (!$authUser->isSuperAdmin) {
@@ -267,17 +280,21 @@ class BoardController extends ApiController
                     return $this->sendError("Not allowed to visit this board", [], Response::HTTP_FORBIDDEN);
                 }
             }
+
             $boardStatuses = $board->statuses;
             $boardContent = [];
+
             for ($i = 0; $i < count($boardStatuses); $i++) {
                 $boardContent[] = $boardStatuses[$i]->toArray();
                 $boardContent[$i]["tasks"] = $boardStatuses[$i]->tasks->sortByDesc("isActive")->values();
             }
+
             $result = [
                 "board_id" => $board->id,
                 "isArchived" => $board->isArchived,
                 "statuses" => $boardContent,
             ];
+
             if ($authUser->isSuperAdmin && !$getUserAsBoardMember?->isBoardOwner) {
                 $result["userRole"] = "SuperAdmin";
                 $result["isBoardOwner"] = 0;
@@ -285,13 +302,14 @@ class BoardController extends ApiController
                 $result["userRole"] = $getUserAsBoardMember->role;
                 $result["isBoardOwner"] = $getUserAsBoardMember->isBoardOwner;
             }
+
             return $this->sendResponse($result);
         } catch (Exception $exception) {
             return $this->sendError('Something went wrong, please contact administrator!', [], Response::HTTP_INTERNAL_SERVER_ERROR);
         }
     }
 
-    public function getBoardMembers($slug)
+    public function getBoardMembers($slug, Request $request)
     {
         try {
             $board = Board::where("slug", $slug)->first();
@@ -308,25 +326,36 @@ class BoardController extends ApiController
                     return $this->sendError("Not allowed to perform this action", [], Response::HTTP_METHOD_NOT_ALLOWED);
                 }
             }
+            if ($request->has("search")) {
+                $searchInput = $request->get("search");
+                $users = User::where("email", "LIKE", $searchInput . "%")
+                    ->whereHas('getBoardMembers', function ($q) use ($board) {
+                        $q->where('board_id', $board->id);
+                    })
+                    ->get();
 
-            $members = BoardMembers::query();
+                $boardMembers = $board->getMembers;
 
-            $boardMembers = $members->where("board_id", $board->id)->paginate(30);
+                return $this->sendResponse($users);
+            } else {
+                $members = BoardMembers::query();
+                $boardMembers = $members->where("board_id", $board->id)->paginate(30);
 
-            $result = [];
+                $result = [];
 
-            foreach ($boardMembers->items() as $idx => $member) {
-                $result[] = $member->toArray();
-                $result[$idx]["email"] = $member->getUser["email"];
+                foreach ($boardMembers->items() as $idx => $member) {
+                    $result[] = $member->toArray();
+                    $result[$idx]["email"] = $member->getUser["email"];
+                }
+                $data = [
+                    "members" => $result,
+                    "currentPage" => $boardMembers->currentPage(),
+                    "hasMorePages" => $boardMembers->hasMorePages(),
+                    "lastPage" => $boardMembers->lastPage(),
+                    "totalMembers" => $boardMembers->total()
+                ];
+                return $this->sendResponse($data);
             }
-            $data = [
-                "members" => $result,
-                "currentPage" => $boardMembers->currentPage(),
-                "hasMorePages" => $boardMembers->hasMorePages(),
-                "lastPage" => $boardMembers->lastPage(),
-                "totalMembers" => $boardMembers->total()
-            ];
-            return $this->sendResponse($data);
         } catch (Exception $exception) {
             return $this->sendError('Something went wrong, please contact administrator!', [], Response::HTTP_INTERNAL_SERVER_ERROR);
         }
@@ -353,6 +382,7 @@ class BoardController extends ApiController
 
             $authUser = Auth::user();
             $checkAuthUserRole = BoardMembers::where("board_id", $request->get("board_id"))->where("user_id", $authUser->id)->first();
+
             if (!$checkAuthUserRole || $checkAuthUserRole->role !== "Admin") {
                 return $this->sendError("Not allowed to perform this action", [], Response::HTTP_METHOD_NOT_ALLOWED);
             }
@@ -376,6 +406,7 @@ class BoardController extends ApiController
 
             $checkForUser->role = $request->get("role");
             $checkForUser->save();
+
             return $this->sendResponse(["User role modified"]);
         } catch (Exception $exception) {
             return $this->sendError('Something went wrong, please contact administrator!', [], Response::HTTP_INTERNAL_SERVER_ERROR);
@@ -388,13 +419,17 @@ class BoardController extends ApiController
             $validate = Validator::make($request->all(), [
                 "member_id" => "required"
             ]);
+
             if ($validate->fails()) {
                 return $this->sendError($validate->messages()->toArray());
             }
+
             $board = Board::find($id);
+
             if (!$board) {
                 return $this->sendError("Board not found", [], Response::HTTP_NOT_FOUND);
             }
+
             $authUser = Auth::user();
             $getuser = BoardMembers::where("user_id", $authUser->id)->where("board_id", $board->id)->first();
 
