@@ -19,7 +19,7 @@ return new class extends Migration
             $table->foreign('task_id')->references('id')->on('tasks')->onDelete('cascade');
             $table->bigInteger('user_id')->unsigned();
             $table->foreign('user_id')->references('user_id')->on('board_members');
-            $table->string('action', 50);
+            $table->string('action', 255);
             $table->timestamps();
         });
     }
