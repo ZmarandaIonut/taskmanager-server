@@ -2,6 +2,7 @@
 
 namespace App\Http\Controllers;
 
+use App\Events\SendEventToClient;
 use App\Models\ArchivedTasks;
 use App\Models\BoardMembers;
 use App\Models\Status;
@@ -42,6 +43,15 @@ class TaskController extends ApiController
             $task->name = $request->get("name");
             $task->status_id = $request->get("status_id");
             $task->save();
+
+            $getAllBoardMemembers = BoardMembers::where("board_id", $status->board->id)->get();
+            $users = [];
+
+            foreach ($getAllBoardMemembers as $member) {
+                $users[] = $member->user_id;
+            }
+
+            event(new SendEventToClient($task, $users, "new_task"));
 
             $taskHistory = new TaskHistory();
             $taskHistory->task_id = $task->id;
@@ -114,6 +124,15 @@ class TaskController extends ApiController
             $taskHistory->action = "$authUser->email" . " changed task name from {$prevTaskName} to {$task->name}";
             $taskHistory->save();
 
+            $getAllBoardMemembers = BoardMembers::where("board_id", $task->status->board->id)->get();
+            $users = [];
+
+            foreach ($getAllBoardMemembers as $member) {
+                $users[] = $member->user_id;
+            }
+
+            event(new SendEventToClient($taskHistory, $users, "task_history"));
+
             return $this->sendResponse($task->toArray());
         } catch (Exception $exception) {
             Log::error($exception);
@@ -135,26 +154,55 @@ class TaskController extends ApiController
                 return $this->sendError('task not found!', [], Response::HTTP_NOT_FOUND);
             }
 
+            $getAllBoardMemembers = BoardMembers::where("board_id", $task->status->board->id)->get();
+            $users = [];
+
+            foreach ($getAllBoardMemembers as $member) {
+                $users[] = $member->user_id;
+            }
+
             if (!$task->isArchived) {
                 $archiveTask = new ArchivedTasks();
                 $archiveTask->task_id = $task->id;
                 $archiveTask->archived_by = $user->id;
                 $archiveTask->save();
 
+                event(new SendEventToClient($archiveTask, $users, "archive_task"));
+
                 $taskHistory = new TaskHistory();
                 $taskHistory->task_id = $task->id;
                 $taskHistory->user_id = $user->id;
                 $taskHistory->action = "$user->email" . " archived the task";
                 $taskHistory->save();
+
+                $getAllBoardMemembers = BoardMembers::where("board_id", $task->status->board->id)->get();
+                $users = [];
+
+                foreach ($getAllBoardMemembers as $member) {
+                    $users[] = $member->user_id;
+                }
+
+                event(new SendEventToClient($taskHistory, $users, "task_history"));
             } else {
                 $archiveTask = ArchivedTasks::where("task_id", $task->id)->first();
                 $archiveTask->delete();
+
+                event(new SendEventToClient($task, $users, "unarchived_task"));
 
                 $taskHistory = new TaskHistory();
                 $taskHistory->task_id = $task->id;
                 $taskHistory->user_id = $user->id;
                 $taskHistory->action = "$user->email" . " unarchived the task";
                 $taskHistory->save();
+
+                $getAllBoardMemembers = BoardMembers::where("board_id", $task->status->board->id)->get();
+                $users = [];
+
+                foreach ($getAllBoardMemembers as $member) {
+                    $users[] = $member->user_id;
+                }
+
+                event(new SendEventToClient($taskHistory, $users, "task_history"));
             }
 
             $task->isArchived = $task->isArchived ? false : true;
@@ -185,6 +233,16 @@ class TaskController extends ApiController
 
             DB::beginTransaction();
             $task->delete();
+
+            $getAllBoardMemembers = BoardMembers::where("board_id", $task->status->board->id)->get();
+            $users = [];
+
+            foreach ($getAllBoardMemembers as $member) {
+                $users[] = $member->user_id;
+            }
+
+            event(new SendEventToClient(["task_id" => $id], $users, "delete_task"));
+
             DB::commit();
 
             return $this->sendResponse([], Response::HTTP_NO_CONTENT);
@@ -224,11 +282,29 @@ class TaskController extends ApiController
             $task->isActive = $status;
             $task->save();
 
+            $getAllBoardMemembers = BoardMembers::where("board_id", $task->status->board->id)->get();
+            $users = [];
+
+            foreach ($getAllBoardMemembers as $member) {
+                $users[] = $member->user_id;
+            }
+
+            event(new SendEventToClient($task, $users, "change_task_status"));
+
             $taskHistory = new TaskHistory();
             $taskHistory->task_id = $task->id;
             $taskHistory->user_id = $authUser->id;
             $taskHistory->action = "$authUser->email" . ' changed task status to ' . ($status ? 'active' : 'inactive');
             $taskHistory->save();
+
+            $getAllBoardMemembers = BoardMembers::where("board_id", $task->status->board->id)->get();
+            $users = [];
+
+            foreach ($getAllBoardMemembers as $member) {
+                $users[] = $member->user_id;
+            }
+
+            event(new SendEventToClient($taskHistory, $users, "task_history"));
 
             return $this->sendResponse($task);
         } catch (Exception $exception) {

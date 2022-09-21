@@ -2,6 +2,7 @@
 
 namespace App\Http\Controllers;
 
+use App\Events\SendEventToClient;
 use App\Models\Board;
 use App\Models\BoardMembers;
 use App\Models\Status;
@@ -38,6 +39,15 @@ class StatusController extends ApiController
             $status->name = $request->get("name");
             $status->board_id = $request->get("board_id");
             $status->save();
+
+            $getAllBoardMemembers = BoardMembers::where("board_id", $status->board->id)->get();
+            $users = [];
+
+            foreach ($getAllBoardMemembers as $member) {
+                $users[] = $member->user_id;
+            }
+
+            event(new SendEventToClient($status, $users, "new_status"));
 
             return $this->sendResponse($status->toArray(), Response::HTTP_CREATED);
         } catch (Exception $exception) {
@@ -121,8 +131,18 @@ class StatusController extends ApiController
                 return $this->sendError("Not allowed to perform this action", [], Response::HTTP_METHOD_NOT_ALLOWED);
             }
 
+            $getAllBoardMemembers = BoardMembers::where("board_id", $status->board->id)->get();
+            $users = [];
+
+            foreach ($getAllBoardMemembers as $member) {
+                $users[] = $member->user_id;
+            }
+
             DB::beginTransaction();
+
             $status->delete();
+            event(new SendEventToClient(["status_id" => $id], $users, "delete_status"));
+
             DB::commit();
 
             return $this->sendResponse([], Response::HTTP_NO_CONTENT);

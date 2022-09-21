@@ -41,6 +41,15 @@ class BoardController extends ApiController
             $board->slug = Str::random(15);
             $board->save();
 
+            $getAllBoardMemembers = BoardMembers::where("board_id", $board->id)->get();
+            $users = [];
+
+            foreach ($getAllBoardMemembers as $member) {
+                $users[] = $member->user_id;
+            }
+
+            event(new SendEventToClient($board, $users, "board"));
+
             $boardMember = new BoardMembers();
             $boardMember->board_id = $board->id;
             $boardMember->user_id = $board->owner_id;
@@ -107,6 +116,15 @@ class BoardController extends ApiController
 
             $board->isArchived = $board->isArchived ? false : true;
             $board->save();
+
+            $getAllBoardMemembers = BoardMembers::where("board_id", $board->id)->get();
+            $users = [];
+
+            foreach ($getAllBoardMemembers as $member) {
+                $users[] = $member->user_id;
+            }
+
+            event(new SendEventToClient($board, $users, "archive_board"));
 
             return $this->sendResponse($board->toArray());
         } catch (Exception $exception) {
@@ -222,12 +240,21 @@ class BoardController extends ApiController
 
             $user = Auth::user();
 
+            $getAllBoardMemembers = BoardMembers::where("board_id", $board->id)->get();
+            $users = [];
+            foreach ($getAllBoardMemembers as $member) {
+                $users[] = $member->user_id;
+            }
+
             if ($user->id !== $board->owner_id && !$user->isSuperAdmin) {
                 return $this->sendError("Not allowed to delete this board", [], Response::HTTP_METHOD_NOT_ALLOWED);
             }
 
             DB::beginTransaction();
             $board->delete();
+
+            event(new SendEventToClient(["board_id"=>$id], $users, "delete_board"));
+
             DB::commit();
 
             return $this->sendResponse([], Response::HTTP_NO_CONTENT);
@@ -336,8 +363,6 @@ class BoardController extends ApiController
                     })
                     ->get();
 
-                $boardMembers = $board->getMembers;
-
                 return $this->sendResponse($users);
             } else {
                 $members = BoardMembers::query();
@@ -409,6 +434,15 @@ class BoardController extends ApiController
             $checkForUser->role = $request->get("role");
             $checkForUser->save();
 
+            $getAllBoardMemembers = BoardMembers::where("board_id", $request->get("board_id"))->get();
+            $users = [];
+
+            foreach ($getAllBoardMemembers as $member) {
+                $users[] = $member->user_id;
+            }
+
+            event(new SendEventToClient($checkForUser, $users, "change_member_role"));
+
             return $this->sendResponse(["User role modified"]);
         } catch (Exception $exception) {
             return $this->sendError('Something went wrong, please contact administrator!', [], Response::HTTP_INTERNAL_SERVER_ERROR);
@@ -449,7 +483,18 @@ class BoardController extends ApiController
                 return $this->sendError("Not allowed to remove the owner of this board", [], Response::HTTP_METHOD_NOT_ALLOWED);
             }
 
+            DB::beginTransaction();
+
+            $getAllBoardMemembers = BoardMembers::where("board_id", $board->id)->get();
+            $users = [];
+
+            foreach ($getAllBoardMemembers as $member) {
+                $users[] = $member->user_id;
+            }
+
+            event(new SendEventToClient(["member_id"=>$boardMember->id], $users, "remove_board_member"));
             $boardMember->delete();
+            DB::commit();
 
             return $this->sendResponse([]);
         } catch (Exception $exception) {
