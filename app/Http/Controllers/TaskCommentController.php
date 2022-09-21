@@ -2,6 +2,7 @@
 
 namespace App\Http\Controllers;
 
+use App\Events\SendEventToClient;
 use App\Models\BoardMembers;
 use App\Models\Task;
 use App\Models\TaskComment;
@@ -15,6 +16,7 @@ use Illuminate\Support\Facades\Auth;
 use Illuminate\Support\Facades\DB;
 use Illuminate\Support\Facades\Log;
 use Illuminate\Support\Facades\Validator;
+use \App\Events\TaskCommentEvent;
 
 class TaskCommentController extends ApiController
 {
@@ -42,7 +44,6 @@ class TaskCommentController extends ApiController
             if ($tagged_user && $authUser->id == $tagged_user->id) {
                 return $this->sendError("You cannot tag yourself");
             }
-            error_log($tagged_user);
             $taskComment = new TaskComment();
             $taskComment->comment = $request->get('comment');
             $taskComment->task_id = $request->get('task_id');
@@ -60,6 +61,15 @@ class TaskCommentController extends ApiController
                 $userNotification->message = "{$authUser->name} has mentioned you in a comment, board: {$task->status->board->name}, status: {$task->status->name} task: {$task->name}";
                 $userNotification->save();
             }
+
+            $getAllBoardMemembers = BoardMembers::where("board_id", $task->status->board->id)->get();
+            $users = [];
+
+            foreach ($getAllBoardMemembers as $member) {
+                $users[] = $member->user_id;
+            }
+
+            event(new SendEventToClient($taskComment, $users, "comments"));
 
             return $this->sendResponse($taskComment->toArray(), Response::HTTP_CREATED);
         } catch (Exception $exception) {
@@ -116,6 +126,15 @@ class TaskCommentController extends ApiController
             if (!BoardMembers::where("user_id", $user->id)->where("board_id", $board->id)->first()) {
                 return $this->sendError("Not allowed", [], Response::HTTP_UNAUTHORIZED);
             }
+
+            $getAllBoardMemembers = BoardMembers::where("board_id", $board->id)->get();
+            $users = [];
+
+            foreach ($getAllBoardMemembers as $member) {
+                $users[] = $member->user_id;
+            }
+
+            event(new SendEventToClient(["comment_id" => $comment_id, "task_id" => $comment->task_id], $users, "delete_comment"));
 
             DB::beginTransaction();
             $comment->delete();
