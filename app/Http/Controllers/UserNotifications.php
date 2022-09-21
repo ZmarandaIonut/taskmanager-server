@@ -9,6 +9,7 @@ use Illuminate\Http\Response;
 use Illuminate\Support\Facades\Auth;
 use Illuminate\Support\Facades\DB;
 use Illuminate\Support\Facades\Validator;
+use App\Events\SendEventToClient;
 
 class UserNotifications extends ApiController
 {
@@ -17,7 +18,7 @@ class UserNotifications extends ApiController
         try {
             $authUser = Auth::user();
             $notifictaionsQuery = ModelUserNotifications::query();
-            $notifications = $notifictaionsQuery->where("user_id", $authUser->id)->paginate(20);
+            $notifications = $notifictaionsQuery->where("user_id", $authUser->id)->orderBy("created_at", "desc")->paginate(20);
 
             $result = [
                 "notifications" => $notifications->items(),
@@ -41,6 +42,8 @@ class UserNotifications extends ApiController
             if (!$notification) {
                 return $this->sendError("Not allowed to perform this action", [], Response::HTTP_METHOD_NOT_ALLOWED);
             }
+
+            event(new SendEventToClient(["notification_id" => $notification->id], [$notification->user_id], "delete_notification"));
 
             DB::beginTransaction();
             $notification->delete();

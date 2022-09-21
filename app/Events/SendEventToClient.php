@@ -4,11 +4,13 @@ namespace App\Events;
 
 use Illuminate\Broadcasting\Channel;
 use Illuminate\Broadcasting\InteractsWithSockets;
+use Illuminate\Broadcasting\PresenceChannel;
+use Illuminate\Broadcasting\PrivateChannel;
 use Illuminate\Contracts\Broadcasting\ShouldBroadcast;
 use Illuminate\Foundation\Events\Dispatchable;
 use Illuminate\Queue\SerializesModels;
 
-class NewMessage implements ShouldBroadcast
+class SendEventToClient implements ShouldBroadcast
 {
     use Dispatchable, InteractsWithSockets, SerializesModels;
 
@@ -17,19 +19,21 @@ class NewMessage implements ShouldBroadcast
      *
      * @return void
      */
-    public $message;
-
-    public function __construct($message)
+    public function __construct(protected $content, protected $users, protected $action)
     {
-        $this->message = $message;
+        //
     }
+
 
     public function broadcastWith()
     {
         return [
-            "hello" => $this->message
+            "content" => $this->content,
+            //"users" => $this->users,
+            "action" => $this->action,
         ];
     }
+
     /**
      * Get the channels the event should broadcast on.
      *
@@ -37,6 +41,12 @@ class NewMessage implements ShouldBroadcast
      */
     public function broadcastOn()
     {
-        return new Channel('home');
+        $channels = [];
+
+        foreach ($this->users as $user) {
+            $channels[] = 'user.' . $user;
+        }
+
+        return $channels;
     }
 }

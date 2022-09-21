@@ -15,6 +15,7 @@ use Illuminate\Support\Facades\Auth;
 use Illuminate\Support\Facades\DB;
 use Illuminate\Support\Facades\Log;
 use Illuminate\Support\Facades\Validator;
+use App\Events\SendEventToClient;
 
 class TaskCommentController extends ApiController
 {
@@ -59,8 +60,9 @@ class TaskCommentController extends ApiController
                 $userNotification->user_id = $tagged_user->id;
                 $userNotification->message = "{$authUser->name} has mentioned you in a comment, board: {$task->status->board->name}, status: {$task->status->name} task: {$task->name}";
                 $userNotification->save();
+                event(new SendEventToClient($userNotification, [$userNotification->user_id], "notification"));
             }
-
+            //event(new SendEventToClient("comment nou", [1,5], "new_comment"));
             return $this->sendResponse($taskComment->toArray(), Response::HTTP_CREATED);
         } catch (Exception $exception) {
             Log::error($exception);

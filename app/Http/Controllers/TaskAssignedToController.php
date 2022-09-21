@@ -2,6 +2,7 @@
 
 namespace App\Http\Controllers;
 
+use App\Events\SendEventToClient;
 use App\Models\Board;
 use App\Models\BoardMembers;
 use App\Models\Task;
@@ -58,6 +59,7 @@ class TaskAssignedToController extends ApiController
             $userNotification->user_id = $user->id;
             $userNotification->message = "You have been assigned to a new task, board: {$board->name}, task: {$task->name}";
             $userNotification->save();
+            event(new SendEventToClient($userNotification, [$userNotification->user_id], "notification"));
 
             $taskHistory = new TaskHistory();
             $taskHistory->task_id = $task->id;
