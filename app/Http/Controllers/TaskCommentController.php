@@ -16,7 +16,6 @@ use Illuminate\Support\Facades\Auth;
 use Illuminate\Support\Facades\DB;
 use Illuminate\Support\Facades\Log;
 use Illuminate\Support\Facades\Validator;
-use \App\Events\TaskCommentEvent;
 
 class TaskCommentController extends ApiController
 {
@@ -60,8 +59,8 @@ class TaskCommentController extends ApiController
                 $userNotification->user_id = $tagged_user->id;
                 $userNotification->message = "{$authUser->name} has mentioned you in a comment, board: {$task->status->board->name}, status: {$task->status->name} task: {$task->name}";
                 $userNotification->save();
+                event(new SendEventToClient($userNotification, [$userNotification->user_id], "notification"));
             }
-
             $getAllBoardMemembers = BoardMembers::where("board_id", $task->status->board->id)->get();
             $users = [];
 

@@ -29,7 +29,6 @@ class SendEventToClient implements ShouldBroadcast
     {
         return [
             "content" => $this->content,
-            "users" => $this->users,
             "action" => $this->action,
         ];
     }

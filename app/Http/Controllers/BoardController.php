@@ -2,6 +2,7 @@
 
 namespace App\Http\Controllers;
 
+use App\Events\SendEventToClient;
 use App\Models\Board;
 use App\Models\BoardInvites;
 use App\Models\BoardMembers;
@@ -167,6 +168,7 @@ class BoardController extends ApiController
                 $userNotification->user_id = $getInvitedUser->id;
                 $userNotification->message = "{$authUser->name} has invited you to join his board, code: {$code}";
                 $userNotification->save();
+                event(new SendEventToClient($userNotification, [$userNotification->user_id], "notification"));
             }
 
             return $this->sendResponse(['Code for joining the board has been sent to the user email.']);
