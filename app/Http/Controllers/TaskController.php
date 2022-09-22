@@ -44,14 +44,17 @@ class TaskController extends ApiController
             $task->status_id = $request->get("status_id");
             $task->save();
 
+            /*
             $getAllBoardMemembers = BoardMembers::where("board_id", $status->board->id)->get();
             $users = [];
 
             foreach ($getAllBoardMemembers as $member) {
                 $users[] = $member->user_id;
             }
-
-            event(new SendEventToClient($task, $users, "new_task"));
+            $data = $status->toArray();
+            $data["tasks"] = $status->tasks;
+            event(new SendEventToClient($data, $users, "new_task"));
+            */
 
             $taskHistory = new TaskHistory();
             $taskHistory->task_id = $task->id;
@@ -94,7 +97,7 @@ class TaskController extends ApiController
     public function update($id, Request $request)
     {
         try {
-            $task = Task::find($id);
+            $task = Task::where("id", $id)->with("status")->first();
             $authUser = Auth::user();
             $foundUser = BoardMembers::where("board_id", $task->status->board->id)->where("user_id", $authUser->id)->first();
 
@@ -144,7 +147,7 @@ class TaskController extends ApiController
     {
         try {
             $user = Auth::user();
-            $task = Task::find($id);
+            $task = Task::where("id", $id)->with("status")->first();
 
             if ($user->id != $task->status->board->owner_id) {
                 return $this->sendError("Not allowed to perform this action", [], Response::HTTP_METHOD_NOT_ALLOWED);
@@ -219,7 +222,9 @@ class TaskController extends ApiController
     {
         try {
             $user = Auth::user();
-            $task = Task::find($id);
+            $task = Task::where('id', $id)
+                ->with('status')
+                ->first();
 
             if (!$task) {
                 return $this->sendError('task not found!', [], Response::HTTP_NOT_FOUND);
@@ -234,6 +239,8 @@ class TaskController extends ApiController
             DB::beginTransaction();
             $task->delete();
 
+            /* real time delete task
+            
             $getAllBoardMemembers = BoardMembers::where("board_id", $task->status->board->id)->get();
             $users = [];
 
@@ -241,14 +248,16 @@ class TaskController extends ApiController
                 $users[] = $member->user_id;
             }
 
-            event(new SendEventToClient(["task_id" => $id], $users, "delete_task"));
+               $data = array_merge($task->status->toArray(), ['tasks' => $task->status->tasks]);
 
+              event(new SendEventToClient($data, $users, "delete_task"));
+              */
             DB::commit();
 
             return $this->sendResponse([], Response::HTTP_NO_CONTENT);
         } catch (Exception $exception) {
             Log::error($exception);
-            return $this->sendError('Something went wrong, please contact administrator!', [], Response::HTTP_INTERNAL_SERVER_ERROR);
+            return $this->sendError($exception, [], Response::HTTP_INTERNAL_SERVER_ERROR);
         }
     }
 
@@ -278,7 +287,7 @@ class TaskController extends ApiController
             }
 
             $status = $request->get("status");
-            $task = Task::find($request->get("task_id"));
+            $task = Task::where("id", $request->get("task_id"))->with("status")->first();
             $task->isActive = $status;
             $task->save();
 
@@ -316,8 +325,7 @@ class TaskController extends ApiController
     public function getTaskHistory($task_id)
     {
         try {
-            $task = Task::find($task_id);
-
+            $task = Task::where("id", $task_id)->with("status")->first();
             if (!$task) {
                 return $this->sendError('task not found!', [], Response::HTTP_NOT_FOUND);
             }
@@ -332,15 +340,11 @@ class TaskController extends ApiController
             $taskHistory = TaskHistory::where('task_id', $task->id)->orderBy("created_at", "DESC")->paginate(30);
 
             $result = [
-                "task_history" => [],
+                "task_history" => $taskHistory->items(),
                 "currentPage" => $taskHistory->currentPage(),
                 "hasMorePages" => $taskHistory->hasMorePages(),
                 "lastPage" => $taskHistory->lastPage()
             ];
-
-            foreach ($taskHistory as $task_history) {
-                $result["task_history"][] = $task_history;
-            }
 
             return $this->sendResponse($result);
         } catch (Exception $exception) {
