@@ -10,6 +10,7 @@ use App\Models\Task;
 use App\Models\TaskAssignedTo;
 use App\Models\TaskHistory;
 use Exception;
+use Illuminate\Http\JsonResponse;
 use Illuminate\Http\Request;
 use Illuminate\Http\Response;
 use Illuminate\Support\Facades\Auth;
@@ -19,7 +20,7 @@ use Illuminate\Support\Facades\Validator;
 
 class TaskController extends ApiController
 {
-    public function add(Request $request)
+    public function add(Request $request): JsonResponse
     {
         try {
             $validate = Validator::make($request->all(), [
@@ -44,18 +45,6 @@ class TaskController extends ApiController
             $task->status_id = $request->get("status_id");
             $task->save();
 
-            /*
-            $getAllBoardMemembers = BoardMembers::where("board_id", $status->board->id)->get();
-            $users = [];
-
-            foreach ($getAllBoardMemembers as $member) {
-                $users[] = $member->user_id;
-            }
-            $data = $status->toArray();
-            $data["tasks"] = $status->tasks;
-            event(new SendEventToClient($data, $users, "new_task"));
-            */
-
             $taskHistory = new TaskHistory();
             $taskHistory->task_id = $task->id;
             $taskHistory->user_id = $authUser->id;
@@ -69,32 +58,7 @@ class TaskController extends ApiController
         }
     }
 
-    public function getAllTasksForStatus($statusId)
-    {
-        try {
-            $status = Status::find($statusId);
-            $tasks = $status->tasks;
-
-            if (!$tasks) {
-                return $this->sendError('tasks not found!', [], Response::HTTP_NOT_FOUND);
-            }
-
-            $authUser = Auth::user();
-            $foundUser = BoardMembers::where("board_id", $status->board->id)->where("user_id", $authUser->id)->first();
-
-            if (!$foundUser) {
-                return $this->sendError("Not allowed to perform this action", [], Response::HTTP_METHOD_NOT_ALLOWED);
-            }
-
-            return $this->sendResponse($tasks->toArray());
-        } catch (Exception $exception) {
-            Log::error($exception);
-
-            return $this->sendError('Something went wrong, please contact administrator!', [], Response::HTTP_INTERNAL_SERVER_ERROR);
-        }
-    }
-
-    public function update($id, Request $request)
+    public function update($id, Request $request): JsonResponse
     {
         try {
             $task = Task::where("id", $id)->with("status")->first();
@@ -143,24 +107,23 @@ class TaskController extends ApiController
         }
     }
 
-    public function archive($id)
+    public function archive($id): JsonResponse
     {
         try {
             $user = Auth::user();
             $task = Task::where("id", $id)->with("status")->first();
 
-            if ($user->id != $task->status->board->owner_id) {
-                return $this->sendError("Not allowed to perform this action", [], Response::HTTP_METHOD_NOT_ALLOWED);
-            }
-
             if (!$task) {
                 return $this->sendError('task not found!', [], Response::HTTP_NOT_FOUND);
             }
 
-            $getAllBoardMemembers = BoardMembers::where("board_id", $task->status->board->id)->get();
-            $users = [];
+            if ($user->id != $task->status->board->owner_id) {
+                return $this->sendError("Not allowed to perform this action", [], Response::HTTP_METHOD_NOT_ALLOWED);
+            }
 
-            foreach ($getAllBoardMemembers as $member) {
+
+            $users = [];
+            foreach ($task->status->board->getMembers as $member) {
                 $users[] = $member->user_id;
             }
 
@@ -178,13 +141,6 @@ class TaskController extends ApiController
                 $taskHistory->action = "$user->email" . " archived the task";
                 $taskHistory->save();
 
-                $getAllBoardMemembers = BoardMembers::where("board_id", $task->status->board->id)->get();
-                $users = [];
-
-                foreach ($getAllBoardMemembers as $member) {
-                    $users[] = $member->user_id;
-                }
-
                 event(new SendEventToClient($taskHistory, $users, "task_history"));
             } else {
                 $archiveTask = ArchivedTasks::where("task_id", $task->id)->first();
@@ -198,17 +154,10 @@ class TaskController extends ApiController
                 $taskHistory->action = "$user->email" . " unarchived the task";
                 $taskHistory->save();
 
-                $getAllBoardMemembers = BoardMembers::where("board_id", $task->status->board->id)->get();
-                $users = [];
-
-                foreach ($getAllBoardMemembers as $member) {
-                    $users[] = $member->user_id;
-                }
-
                 event(new SendEventToClient($taskHistory, $users, "task_history"));
             }
 
-            $task->isArchived = $task->isArchived ? false : true;
+            $task->isArchived = !$task->isArchived;
             $task->save();
 
             return $this->sendResponse($task->toArray());
@@ -218,7 +167,7 @@ class TaskController extends ApiController
         }
     }
 
-    public function delete($id)
+    public function delete($id): JsonResponse
     {
         try {
             $user = Auth::user();
@@ -231,27 +180,12 @@ class TaskController extends ApiController
             }
 
             $foundUser = BoardMembers::where("board_id", $task->status->board->id)->where("user_id", $user->id)->first();
-
             if (!$foundUser || $foundUser->role !== "Admin") {
                 return $this->sendError("Not allowed to perform this action", [], Response::HTTP_METHOD_NOT_ALLOWED);
             }
 
             DB::beginTransaction();
             $task->delete();
-
-            /* real time delete task
-            
-            $getAllBoardMemembers = BoardMembers::where("board_id", $task->status->board->id)->get();
-            $users = [];
-
-            foreach ($getAllBoardMemembers as $member) {
-                $users[] = $member->user_id;
-            }
-
-               $data = array_merge($task->status->toArray(), ['tasks' => $task->status->tasks]);
-
-              event(new SendEventToClient($data, $users, "delete_task"));
-              */
             DB::commit();
 
             return $this->sendResponse([], Response::HTTP_NO_CONTENT);
@@ -261,34 +195,34 @@ class TaskController extends ApiController
         }
     }
 
-    public function changeTaskStatus(Request $request)
+    public function changeTaskStatus(Request $request): JsonResponse
     {
         try {
-            $validator = Validator::make($request->all(), [
-                "board_id" => "required",
-                "task_id" => "required|exists:tasks,id",
-                "status" => "required|boolean"
+
+            $validate = Validator::make($request->all(), [
+                'task_id' => 'required',
             ]);
 
-            if ($validator->fails()) {
-                return $this->sendError($validator->messages()->toArray());
+            if ($validate->fails()) {
+                return $this->sendError("Bad request", $validate->messages()->toArray());
+            }
+
+            $task = Task::find($request->get('task_id'));
+
+            if (!$task) {
+                return $this->sendError('task not found!', [], Response::HTTP_NOT_FOUND);
             }
 
             $authUser = Auth::user();
-            $isUserAssignedToTask = TaskAssignedTo::where("assigned_to", $authUser->id)->where("task_id", $request->get("task_id"))->first();
-            $getUserRole = BoardMembers::where("user_id", $authUser->id)->where("board_id", $request->get("board_id"))->first();
-
-            if (!$getUserRole) {
-                return $this->sendError("Not allowed to perform this action", [], Response::HTTP_METHOD_NOT_ALLOWED);
-            }
+            $isUserAssignedToTask = TaskAssignedTo::where("assigned_to", $authUser->id)->where("task_id", $task->id)->first();
+            $getUserRole = BoardMembers::where("user_id", $authUser->id)->where("board_id", $task->status->board->id)->first();
 
             if (!$isUserAssignedToTask && $getUserRole->role !== "Admin") {
                 return $this->sendError("Not allowed to perform this action", [], Response::HTTP_METHOD_NOT_ALLOWED);
             }
 
-            $status = $request->get("status");
-            $task = Task::where("id", $request->get("task_id"))->with("status")->first();
-            $task->isActive = $status;
+
+            $task->isActive = !$task->isActive;
             $task->save();
 
             $getAllBoardMemembers = BoardMembers::where("board_id", $task->status->board->id)->get();
@@ -303,15 +237,8 @@ class TaskController extends ApiController
             $taskHistory = new TaskHistory();
             $taskHistory->task_id = $task->id;
             $taskHistory->user_id = $authUser->id;
-            $taskHistory->action = "$authUser->email" . ' changed task status to ' . ($status ? 'active' : 'inactive');
+            $taskHistory->action = "$authUser->email" . ' changed task status to ' . ($task->isActive ? 'active' : 'inactive');
             $taskHistory->save();
-
-            $getAllBoardMemembers = BoardMembers::where("board_id", $task->status->board->id)->get();
-            $users = [];
-
-            foreach ($getAllBoardMemembers as $member) {
-                $users[] = $member->user_id;
-            }
 
             event(new SendEventToClient($taskHistory, $users, "task_history"));
 
@@ -322,7 +249,7 @@ class TaskController extends ApiController
         }
     }
 
-    public function getTaskHistory($task_id)
+    public function getTaskHistory($task_id): JsonResponse
     {
         try {
             $task = Task::where("id", $task_id)->with("status")->first();
