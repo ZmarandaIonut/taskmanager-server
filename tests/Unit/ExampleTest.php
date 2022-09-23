@@ -2,6 +2,8 @@
 
 namespace Tests\Unit;
 
+use App\Models\User;
+use Illuminate\Support\Facades\Hash;
 use PHPUnit\Framework\TestCase;
 
 class ExampleTest extends TestCase

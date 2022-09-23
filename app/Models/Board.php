@@ -11,6 +11,11 @@ class Board extends Model
 
     protected $hidden = ["created_at", "updated_at"];
 
+    public function getOwner()
+    {
+        return $this->belongsTo(User::class, "owner_id", "id");
+    }
+
     public function getMembers()
     {
         return $this->hasMany(BoardMembers::class, 'board_id', 'id');

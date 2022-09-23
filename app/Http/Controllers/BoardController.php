@@ -101,19 +101,18 @@ class BoardController extends ApiController
     public function archive($id)
     {
         try {
-            $user = Auth::user();
             $board = Board::find($id);
 
             if (!$board) {
                 return $this->sendError('Board not found!', [], Response::HTTP_NOT_FOUND);
             }
+            $user = Auth::user();
 
             $foundUser = BoardMembers::where("board_id", $id)->where("user_id", $user->id)->first();
 
             if (!$foundUser || ($user->id !== $board->owner_id)) {
                 return $this->sendError("Not allowed to perform this action", [], Response::HTTP_METHOD_NOT_ALLOWED);
             }
-
             $board->isArchived = $board->isArchived ? false : true;
             $board->save();
 
@@ -216,7 +215,6 @@ class BoardController extends ApiController
             if ($authUser->email !== $checkUser->email) {
                 return $this->sendError("Not allowed to use this code", [], Response::HTTP_NOT_ACCEPTABLE);
             }
-
             $boardMember = new BoardMembers();
             $boardMember->board_id = $checkUser->board_id;
             $boardMember->user_id = $authUser->id;
@@ -253,7 +251,7 @@ class BoardController extends ApiController
             DB::beginTransaction();
             $board->delete();
 
-            event(new SendEventToClient(["board_id"=>$id], $users, "delete_board"));
+            event(new SendEventToClient(["board_id" => $id], $users, "delete_board"));
 
             DB::commit();
 
@@ -300,10 +298,8 @@ class BoardController extends ApiController
             if (!$board) {
                 return $this->sendError("Board not found", [], Response::HTTP_NOT_FOUND);
             }
-
             $authUser = Auth::user();
             $getUserAsBoardMember = BoardMembers::where("board_id", $board->id)->where("user_id", $authUser->id)->first();
-
             if (!$authUser->isSuperAdmin) {
                 if (!$getUserAsBoardMember || ($board->isArchived && !$getUserAsBoardMember->isBoardOwner)) {
                     return $this->sendError("Not allowed to visit this board", [], Response::HTTP_FORBIDDEN);
@@ -492,7 +488,7 @@ class BoardController extends ApiController
                 $users[] = $member->user_id;
             }
 
-            event(new SendEventToClient(["member_id"=>$boardMember->id], $users, "remove_board_member"));
+            event(new SendEventToClient(["member_id" => $boardMember->id], $users, "remove_board_member"));
             $boardMember->delete();
             DB::commit();
 
