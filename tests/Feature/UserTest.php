@@ -97,4 +97,43 @@ class UserTest extends TestCase
         $response = $userController->getUser($request);
         $this->assertEquals(200, $response->getStatusCode());
     }
+
+    public function test_getUser_boards()
+    {
+        $getRandomUser = User::inRandomOrder()->first();
+        $userController = new UserController();
+
+        Auth::shouldReceive("user")->once()->andReturn($getRandomUser);
+
+        $request = Request::create("/get-user-boards", "GET");
+
+        $response = $userController->getUserBoards();
+        $this->assertEquals(200, $response->getStatusCode());
+    }
+
+    public function test_getUser_archived_boards()
+    {
+        $getRandomUser = User::inRandomOrder()->first();
+        $userController = new UserController();
+
+        Auth::shouldReceive("user")->once()->andReturn($getRandomUser);
+
+        $request = Request::create("/get-user-archived-boards", "GET");
+
+        $response = $userController->getUserArchivedBoards();
+        $this->assertEquals(200, $response->getStatusCode());
+    }
+
+    public function test_getUser_archived_tasks()
+    {
+        $getRandomUser = User::inRandomOrder()->first();
+        $userController = new UserController();
+
+        Auth::shouldReceive("user")->once()->andReturn($getRandomUser);
+
+        $request = Request::create("/get-user-archived-tasks", "GET");
+
+        $response = $userController->getUserArchivedTasks();
+        $this->assertEquals(200, $response->getStatusCode());
+    }
 }
