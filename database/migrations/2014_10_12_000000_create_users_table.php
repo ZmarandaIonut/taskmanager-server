@@ -21,6 +21,7 @@ return new class extends Migration
             $table->string('password');
             $table->tinyInteger('isSuperAdmin')->default(0);
             $table->string('verify_token', 50)->nullable();
+            $table->text('image')->nullable();
             $table->rememberToken();
             $table->timestamps();
         });

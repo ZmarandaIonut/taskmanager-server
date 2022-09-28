@@ -29,7 +29,10 @@ Route::post("/resend-verify-email", [UserController::class, "resendVerifyEmailCo
 
 Route::middleware(['auth:sanctum'])->group(function () {
   Route::get("/user", [UserController::class, "getUser"]);
+  Route::get("/user/{id}", [UserController::class, "getUserById"]);
   Route::get("/get-user-boards", [UserController::class, "getUserBoards"]);
+  Route::post("/upload-profile-image", [UserController::class, "uploadUserProfileImage"]);
+
   Route::get("/get-joined-boards", [BoardController::class, "getBoardsWhereUserIsMember"]);
   Route::get("/get-user-archived-boards", [UserController::class, "getUserArchivedBoards"]);
   Route::get("/get-user-archived-tasks", [UserController::class, "getUserArchivedTasks"]);

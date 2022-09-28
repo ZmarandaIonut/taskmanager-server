@@ -13,8 +13,10 @@ use Illuminate\Http\Request;
 use Illuminate\Http\Response;
 use Illuminate\Support\Facades\Auth;
 use Illuminate\Support\Facades\DB;
+use Illuminate\Support\Facades\File;
 use Illuminate\Support\Facades\Hash;
 use Illuminate\Support\Facades\Log;
+use Illuminate\Support\Facades\Storage;
 use Illuminate\Support\Facades\Validator;
 use Illuminate\Support\Str;
 
@@ -30,7 +32,22 @@ class UserController extends ApiController
                 "user" => $user
             ]);
         } catch (Exception $exception) {
-            error_log($exception);
+            return $this->sendError('Something went wrong, please contact administrator!', [], Response::HTTP_INTERNAL_SERVER_ERROR);
+        }
+    }
+
+    public function getUserById($id)
+    {
+        try {
+            $user = User::find($id);
+            if (!$user) {
+                return $this->sendError("Not found", [], Response::HTTP_NOT_FOUND);
+            }
+            return $this->sendResponse([
+                "user" => $user,
+                "profile_image" => $user->image
+            ]);
+        } catch (Exception $exception) {
             return $this->sendError('Something went wrong, please contact administrator!', [], Response::HTTP_INTERNAL_SERVER_ERROR);
         }
     }
@@ -59,7 +76,6 @@ class UserController extends ApiController
 
             return $this->sendResponse(["Code for email verification send"], Response::HTTP_CREATED);
         } catch (Exception $exception) {
-            error_log($exception);
             return $this->sendError('Something went wrong, please contact administrator!', [], Response::HTTP_INTERNAL_SERVER_ERROR);
         }
     }
@@ -100,7 +116,6 @@ class UserController extends ApiController
                 "user" => $user->toArray()
             ]);
         } catch (Exception $exception) {
-            Log::error($exception);
             return $this->sendError('Something went wrong, please contact administrator!', [], Response::HTTP_INTERNAL_SERVER_ERROR);
         }
     }
@@ -301,6 +316,39 @@ class UserController extends ApiController
             return $this->sendResponse([
                 'data' => 'Password changed!'
             ]);
+        } catch (Exception $exception) {
+            Log::error($exception);
+            return $this->sendError('Something went wrong, please contact administrator!', [], Response::HTTP_INTERNAL_SERVER_ERROR);
+        }
+    }
+
+    public function uploadUserProfileImage(Request $request)
+    {
+        try {
+            if ($request->has('image')) {
+                $file = $request->file('image');
+                $authUser = Auth::user();
+                $getUser = User::find($authUser->id);
+                if ($getUser->image) {
+                    $arrImgName = explode("/", $getUser->image);
+                    $lastImageName = $arrImgName[count($arrImgName) - 1];
+                    Storage::delete("public/user/" . $lastImageName);
+                }
+                $getRandomString = Str::random(8);
+
+                $filename = "{$getRandomString}." . $file->getClientOriginalExtension();
+
+                $path = '/public/user';
+
+                Storage::putFileAs($path, $file, $filename);
+
+                $getUser->image = "storage/user/{$getRandomString}." . $file->getClientOriginalExtension();
+                $getUser->save();
+
+                return $this->sendResponse([
+                    "Image has been uploaded"
+                ]);
+            }
         } catch (Exception $exception) {
             Log::error($exception);
             return $this->sendError('Something went wrong, please contact administrator!', [], Response::HTTP_INTERNAL_SERVER_ERROR);
