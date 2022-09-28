@@ -25,7 +25,7 @@ class TaskTest extends TestCase
      * @return void
      */
 
-    public function test_add_validator_name_only()
+    public function test_add_validator_name_only(): void
     {
         $taskController = new TaskController();
 
@@ -211,12 +211,33 @@ class TaskTest extends TestCase
         ]);
 
         $user = User::factory()->create();
-        Auth::shouldReceive('user')->once()->andReturn($user);
+        Auth::shouldReceive('user')->andReturn($user);
 
         $task = Task::inRandomOrder()->first();
         Mockery::mock(BoardMembers::class)->shouldReceive('where')->andReturn(null);
 
-        $response = $taskController->delete($task->id);
+        $response = $taskController->changeTaskStatus($request);
+        $this->assertEquals(404, $response->getStatusCode());
+    }
+
+    public function test_get_task_history_not_found()
+    {
+        $taskController = new TaskController();
+
+        $response = $taskController->getTaskHistory(9999);
+        $this->assertEquals(404, $response->getStatusCode());
+    }
+
+    public function test_get_task_history_not_board_member()
+    {
+        $taskController = new TaskController();
+
+        $task = Task::inRandomOrder()->first();
+        $user = User::factory()->create();
+        Auth::shouldReceive('user')->andReturn($user);
+
+        $response = $taskController->getTaskHistory($task->id);
         $this->assertEquals(405, $response->getStatusCode());
     }
+
 }

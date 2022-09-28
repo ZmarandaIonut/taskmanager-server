@@ -19,9 +19,10 @@ use Illuminate\Support\Facades\Validator;
 
 class TaskCommentController extends ApiController
 {
-    public function add(Request $request)
+    public function add(Request $request): \Illuminate\Http\JsonResponse
     {
         try {
+//            dd("test");
             $validate = Validator::make($request->all(), [
                 'comment' => 'required|max:200',
                 'task_id' => 'required|exists:tasks,id',
@@ -33,15 +34,20 @@ class TaskCommentController extends ApiController
             }
 
             $authUser = Auth::user();
+
             $task = Task::find($request->get('task_id'));
 
+            if (!$task) {
+                return $this->sendError('Task not found!', [], Response::HTTP_NOT_FOUND);
+            }
+
             if (!BoardMembers::where("user_id", $authUser->id)->where("board_id", $task->status->board->id)->first()) {
-                return $this->sendError("Not allowed to perform this action", []);
+                return $this->sendError("Not allowed to perform this action", [], Response::HTTP_METHOD_NOT_ALLOWED);
             }
 
             $tagged_user = User::where("email", $request->get("tagged_user_email"))->first();
             if ($tagged_user && $authUser->id == $tagged_user->id) {
-                return $this->sendError("You cannot tag yourself");
+                return $this->sendError("You cannot tag yourself", []);
             }
             $taskComment = new TaskComment();
             $taskComment->comment = $request->get('comment');
@@ -72,7 +78,9 @@ class TaskCommentController extends ApiController
 
             return $this->sendResponse($taskComment->toArray(), Response::HTTP_CREATED);
         } catch (Exception $exception) {
+            //dd($exception);
             Log::error($exception);
+
             return $this->sendError('Something went wrong, please contact administrator!', [], Response::HTTP_INTERNAL_SERVER_ERROR);
         }
     }
@@ -80,17 +88,17 @@ class TaskCommentController extends ApiController
     public function get($task_id)
     {
         try {
-            $authUser = Auth::user();
             $task = Task::find($task_id);
 
             if (!$task) {
                 return $this->sendError('Task not found!', [], Response::HTTP_NOT_FOUND);
             }
 
+            $authUser = Auth::user();
             $isUserBoardMember = BoardMembers::where("user_id", $authUser->id)->where("board_id", $task->status->board->id)->first();
 
             if (!$isUserBoardMember) {
-                return $this->sendError("Not allowed to perform this action", []);
+                return $this->sendError("Not allowed to perform this action", [], Response::HTTP_METHOD_NOT_ALLOWED);
             }
 
             $comments = TaskComment::query();
