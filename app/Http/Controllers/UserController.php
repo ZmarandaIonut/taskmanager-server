@@ -327,6 +327,12 @@ class UserController extends ApiController
         try {
             if ($request->has('image')) {
                 $file = $request->file('image');
+                $validate = Validator::make($request->all(), [
+                    'image'=> 'mimes:jpeg,jpg,png,gif',
+                ]);
+                if($validate->fails()){
+                    return $this->sendError($validate->messages()->toArray());
+                }
                 $authUser = Auth::user();
                 $getUser = User::find($authUser->id);
                 if ($getUser->image) {
